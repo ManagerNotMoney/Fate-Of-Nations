@@ -1,0 +1,278 @@
+(function() {
+    'use strict';
+    const HM = window.HexMap;
+    const C = window.GameConfig;
+    const E = window.EconomyEngine;
+
+    window.UITooltips = {
+        tooltip: null,
+        _bound: {},  // tracks which chips have had listeners attached
+
+        init: function(tooltipEl) {
+            this.tooltip = tooltipEl;
+            this._bindChipTooltip('resMoneyChip');
+            this._bindChipTooltip('resFoodChip');
+            this._bindChipTooltip('resRawChip');
+            this._bindChipTooltip(this._popChipEl());
+            this._bindCanvasTooltip();
+        },
+
+        // ════════════════════════════════════════════════════
+        // GENERIC HELPERS
+        // ════════════════════════════════════════════════════
+
+        /**
+         * Positions the shared tooltip element near a target element.
+         * Call after setting tooltip.innerHTML.
+         */
+        _positionNear: function(anchorEl) {
+            const rect = anchorEl.getBoundingClientRect();
+            let left = rect.left;
+            let top  = rect.bottom + 8;
+            // Re-measure after content is set
+            const tw = this.tooltip.getBoundingClientRect();
+            if (left + tw.width  > window.innerWidth  - 4) left = window.innerWidth  - tw.width  - 4;
+            if (top  + tw.height > window.innerHeight - 4) top  = rect.top - tw.height - 8;
+            this.tooltip.style.left = Math.max(4, left) + 'px';
+            this.tooltip.style.top  = Math.max(4, top)  + 'px';
+        },
+
+        /**
+         * Attaches mouseenter/mouseleave to a chip element (by id or element reference).
+         * The tooltip content is read from `element.dataset.tooltip` on hover.
+         * Safe to call multiple times — will not attach duplicate listeners.
+         */
+        _bindChipTooltip: function(idOrEl) {
+            const el = (typeof idOrEl === 'string') ? document.getElementById(idOrEl) : idOrEl;
+            if (!el || this._bound[el.id || el.className]) return;
+            const key = el.id || el.className;
+
+            el.addEventListener('mouseenter', () => {
+                const html = el.dataset.tooltip;
+                if (!html) return;
+                this.tooltip.innerHTML = html.replace(/\n/g, '<br>');
+                this.tooltip.style.display = 'block';
+                this._positionNear(el);
+            });
+            el.addEventListener('mouseleave', () => {
+                this.tooltip.style.display = 'none';
+            });
+            this._bound[key] = true;
+        },
+
+        /** Returns the population chip's parent element (which gets the tooltip). */
+        _popChipEl: function() {
+            return document.getElementById('resPopulation')?.closest('.res-chip') || null;
+        },
+
+        // ════════════════════════════════════════════════════
+        // CONTENT UPDATERS  (called after each state change)
+        // ════════════════════════════════════════════════════
+
+        updateAll: function() {
+            this._updateMoneyTooltip();
+            this._updateFoodTooltip();
+            this._updateRawTooltip();
+            this._updatePopTooltip();
+        },
+
+        _setChipTooltip: function(idOrEl, html) {
+            const el = (typeof idOrEl === 'string') ? document.getElementById(idOrEl) : idOrEl;
+            if (!el) return;
+            el.title = '';
+            el.dataset.tooltip = html;
+        },
+
+        _updateMoneyTooltip: function() {
+            const chip = document.getElementById('resMoney')?.closest('.res-chip');
+            if (!chip) return;
+
+            let buildingIncome = 0, marketIncome = 0;
+            for (const key of Object.keys(HM.buildings)) {
+                const b = HM.buildings[key];
+                const cfg = C.BUILDINGS[b.type];
+                if (!cfg) continue;
+                if (b.type === 'market') {
+                    marketIncome += E.getMarketIncome(HM, b.col, b.row);
+                } else if (cfg.production?.money && E.isBuildingActive(HM, b.col, b.row)) {
+                    buildingIncome += cfg.production.money;
+                }
+            }
+            const popIncome = HM.townHallBuilt ? Math.floor(HM.resources.population * C.MONEY_PER_POPULATION) : 0;
+            const total = C.BASE_INCOME + buildingIncome + marketIncome + popIncome;
+
+            const lines = [
+                '<b style="color:#4ade80">💰 Доходы:</b>',
+                `<span style="color:var(--muted)">Базовый доход</span> <span style="color:#4ade80">+${C.BASE_INCOME}</span>`,
+            ];
+            if (buildingIncome > 0) lines.push(`<span style="color:var(--muted)">Здания</span> <span style="color:#4ade80">+${buildingIncome}</span>`);
+            if (marketIncome > 0)   lines.push(`<span style="color:var(--muted)">Рынки (1💰 за жителя рядом)</span> <span style="color:#4ade80">+${marketIncome}</span>`);
+            if (popIncome > 0)      lines.push(`<span style="color:var(--muted)">Жители (${Math.floor(HM.resources.population)} × 1)</span> <span style="color:#4ade80">+${popIncome}</span>`);
+            lines.push('', `<b style="color:var(--gold)">Итого: +${total}/ход</b>`);
+
+            this._setChipTooltip(chip, lines.join('\n'));
+        },
+
+        _updateFoodTooltip: function() {
+            const chip = document.getElementById('resFoodChip');
+            if (!chip) return;
+            const res = HM.resources, del = HM.deltas;
+            const pop = Math.floor(res.population);
+            const fmt = (v, d) => `${Math.floor(v)}${d ? (d > 0 ? ` (+${Math.round(d)})` : ` (${Math.round(d)})`) : ''}`;
+
+            const directFood = Math.floor(res.apples + res.fish);
+            const breadFeeds = Math.floor(res.bread) * C.FOOD_PER_POPULATION;
+            const totalFeeds = directFood + breadFeeds;
+            const statusColor  = pop > totalFeeds ? '#f87171' : '#4ade80';
+            const statusText   = pop > totalFeeds
+                ? `⚠️ Дефицит: не хватает на ${pop - totalFeeds} жит.`
+                : `✓ Жители сыты (${totalFeeds - pop} запас)`;
+
+            const lines = [
+                '<b style="color:#fbbf24">🍽️ Еда и кормление:</b>',
+                `<span style="color:var(--muted)">🍞 Хлеб</span> <span style="color:#e8834a">${fmt(res.bread, del.bread)}</span> <span style="color:var(--muted);font-size:10px;">1 хлеб → ${C.FOOD_PER_POPULATION} жителей</span>`,
+                `<span style="color:var(--muted)">🍎 Яблоки</span> <span style="color:#ef4444">${fmt(res.apples, del.apples)}</span> <span style="color:var(--muted);font-size:10px;">1 яблоко → 1 жителю</span>`,
+                `<span style="color:var(--muted)">🐟 Рыба</span> <span style="color:#38bdf8">${fmt(res.fish, del.fish)}</span> <span style="color:var(--muted);font-size:10px;">1 рыба → 1 жителю</span>`,
+                '',
+                `<b style="color:var(--gold)">Может прокормить: ${totalFeeds} жит.</b>`,
+                `<span style="color:${statusColor}">${statusText}</span>`,
+            ];
+            this._setChipTooltip(chip, lines.join('\n'));
+        },
+
+        _updateRawTooltip: function() {
+            const chip = document.getElementById('resRawChip');
+            if (!chip) return;
+            const res = HM.resources, del = HM.deltas;
+            const dw = del.wheat;
+            const lines = [
+                '<b style="color:#86cc14">📦 Сырьё:</b>',
+                `<span style="color:var(--muted)">🌾 Пшеница</span> <span style="color:#86cc14">${Math.floor(res.wheat)}${dw ? (dw > 0 ? ` (+${Math.round(dw)})` : ` (${Math.round(dw)})`) : ''}</span>`,
+            ];
+            this._setChipTooltip(chip, lines.join('\n'));
+        },
+
+        _updatePopTooltip: function() {
+            const chip = this._popChipEl();
+            if (!chip) return;
+            const assigned = E.getTotalAssignedWorkers(HM);
+            const free = E.getFreeWorkers(HM);
+            const lines = [
+                '<b style="color:#4f8ef7">👥 Население</b>',
+                `Всего: ${Math.floor(HM.resources.population)}`,
+                `На работе: ${assigned}`,
+                `Свободно: ${free}`,
+            ];
+            this._setChipTooltip(chip, lines.join('\n'));
+        },
+
+        // ════════════════════════════════════════════════════
+        // CANVAS HOVER TOOLTIP
+        // ════════════════════════════════════════════════════
+
+        _bindCanvasTooltip: function() {
+            if (this._bound['canvas']) return;
+            const canvas = window.Renderer.canvas;
+            if (!canvas) return;
+
+            canvas.addEventListener('mousemove', e => {
+                const rect = canvas.getBoundingClientRect();
+                const hex = HM.pixelToHex(e.clientX - rect.left, e.clientY - rect.top);
+                if (!hex) { this.tooltip.style.display = 'none'; return; }
+
+                this.tooltip.innerHTML = this._buildHexTooltip(hex.col, hex.row);
+                this.tooltip.style.display = 'block';
+
+                // Position following the cursor
+                let left = e.clientX + 12, top = e.clientY + 12;
+                const tw = this.tooltip.getBoundingClientRect();
+                if (left + tw.width  > window.innerWidth  - 4) left = e.clientX - tw.width  - 8;
+                if (top  + tw.height > window.innerHeight - 4) top  = e.clientY - tw.height - 8;
+                this.tooltip.style.left = Math.max(4, left) + 'px';
+                this.tooltip.style.top  = Math.max(4, top)  + 'px';
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                this.tooltip.style.display = 'none';
+            });
+
+            this._bound['canvas'] = true;
+        },
+
+        /** Builds the HTML string shown when hovering a hex cell. */
+        _buildHexTooltip: function(col, row) {
+            const tile     = HM.data[row][col];
+            const key      = col + ',' + row;
+            const building = HM.buildings[key];
+            const inQueue  = HM.buildQueue.find(q => q.col === col && q.row === row);
+            const owner    = HM.getOwner(col, row);
+
+            let html = `<b>${C.TILES[tile.type].name}</b> <span style="color:var(--muted)">[${col},${row}]</span>`;
+
+            if (owner) {
+                const district = HM.getDistrictName(col, row);
+                html += district
+                    ? `<br><span style="color:var(--gold)">🏛️ ${owner}, район «${district}»</span>`
+                    : `<br><span style="color:var(--gold)">🏛️ ${owner}</span>`;
+            }
+
+            if (building) {
+                const bc = C.BUILDINGS[building.type];
+                html += `<br><span style="color:var(--accent)">${bc.icon} ${bc.name}${building.name ? ` «${building.name}»` : ''}</span>`;
+
+                if (bc.workersRequired) {
+                    const assigned = building.assignedWorkers || 0;
+                    const active = assigned >= bc.workersRequired;
+                    html += `<br><span style="color:${active ? '#4ade80' : '#f87171'};font-size:11px;">👷 ${assigned}/${bc.workersRequired} рабочих</span>`;
+                }
+
+                html += this._buildingProductionLine(building, bc);
+
+            } else if (inQueue) {
+                const bc = C.BUILDINGS[inQueue.type];
+                html += `<br><span style="color:var(--gold)">🔨 Строится: ${bc.name} (${inQueue.turnsRemaining} ход)</span>`;
+            }
+
+            return html;
+        },
+
+        /** Returns a one-line production summary for the hover tooltip. */
+        _buildingProductionLine: function(building, bc) {
+            // Check for strike
+            let strikeInfo = '';
+            if (window.EventsEngine) {
+                const strike = window.EventsEngine.getActiveStrike();
+                if (strike && strike.targetCol === building.col && strike.targetRow === building.row) {
+                    strikeInfo = '<br><span style="color:#fbbf24;font-size:11px;">✊ Забастовка! Производство остановлено</span>';
+                }
+            }
+
+            const active = E.isBuildingActive(HM, building.col, building.row);
+            const col = active ? 'var(--success)' : 'var(--muted)';
+            const suffix = active ? '' : ' (неактивно)';
+
+            if (building.type === 'market') {
+                const income = E.getMarketIncome(HM, building.col, building.row);
+                return `<br><span style="color:#4ade80;font-size:11px;">💰 +${income} монет/ход (1💰 за жителя рядом)</span>` + strikeInfo;
+            }
+            if (building.type === 'port') {
+                const assigned = building.assignedWorkers || 0;
+                const fish = assigned === 1 ? 2 : assigned >= 2 ? 5 : 0;
+                return `<br><span style="color:${col};font-size:11px;">🐟 +${fish} рыбы/ход (${assigned}/2 рыбаков)${suffix}</span>` + strikeInfo;
+            }
+            if (building.type === 'orchard') {
+                const assigned = building.assignedWorkers || 0;
+                const apples = active ? 2 * assigned : 0;
+                return `<br><span style="color:${col};font-size:11px;">🍎 +${apples} яблок/ход (${assigned}/2 садовников)${suffix}</span>` + strikeInfo;
+            }
+            if (bc.production) {
+                const prodStr = Object.entries(bc.production)
+                    .filter(([, v]) => v > 0)
+                    .map(([r, a]) => `+${a} ${C.RESOURCES[r]?.icon || r}`)
+                    .join(' ');
+                if (prodStr) return `<br><span style="color:${col};font-size:11px;">${prodStr}/ход${suffix}</span>` + strikeInfo;
+            }
+            return strikeInfo;
+        }
+    };
+})();
