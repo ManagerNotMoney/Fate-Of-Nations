@@ -457,3 +457,45 @@
     .market-stats { grid-template-columns: 1fr; }
     .market-stat.highlight { grid-column: span 1; }
 }
+
+/* ═══ MINE MODE SWITCHER ═══════════════════════════════ */
+.mine-tab .info-tab-header { border-left: 3px solid #94a3b8; }
+
+.mine-mode-grid {
+    display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px;
+}
+.mine-mode-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    cursor: pointer; transition: all 0.15s;
+    text-align: left; width: 100%;
+}
+.mine-mode-btn:hover {
+    border-color: var(--border-hi);
+    background: rgba(79,142,247,0.05);
+    transform: translateX(3px);
+}
+.mine-mode-btn.active {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.10);
+    box-shadow: 0 0 12px rgba(79,142,247,0.15);
+}
+.mine-mode-btn.active .mine-mode-name {
+    color: var(--accent);
+    font-weight: 700;
+}
+.mine-mode-icon { font-size: 18px; flex-shrink: 0; }
+.mine-mode-name {
+    font-size: 13px; font-weight: 600; color: var(--text); flex: 1;
+}
+.mine-mode-prod {
+    font-size: 11px; color: var(--gold); font-weight: 600;
+    background: rgba(244,185,66,0.08); border: 1px solid rgba(244,185,66,0.15);
+    border-radius: 6px; padding: 2px 8px;
+}
+.mine-hint {
+    font-size: 11px; color: var(--muted); line-height: 1.5;
+    padding: 7px 10px; background: rgba(79,142,247,0.05);
+    border: 1px solid rgba(79,142,247,0.12); border-radius: 7px;
+}

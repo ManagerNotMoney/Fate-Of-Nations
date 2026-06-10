@@ -231,8 +231,8 @@
             this.townHallBuilt = false;
             this.townhallQueued = false;
             this.territory = {};
-            this.resources = { money: 50, wheat: 0, bread: 8, apples: 0, fish: 0, population: 3, defense: 0 };
-            this.deltas = { money: 0, wheat: 0, bread: 0, apples: 0, fish: 0, population: 0, defense: 0 };
+            this.resources = { money: 50, wheat: 0, bread: 8, apples: 0, fish: 0, iron: 0, copper: 0, population: 3, defense: 0 };
+            this.deltas = { money: 0, wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0, population: 0, defense: 0 };
             this.lastEvents = [];
             this.pendingEventResults = [];
             this.winStreakTurns = 0;
@@ -254,8 +254,8 @@
                     const val = window.Noise.fbm(c * scale + seed, r * scale + seed, 4);
                     if      (val < 0.20) row.push('ocean');
                     else if (val < 0.35) row.push('sea');
-                    else if (val < 0.58) row.push('plain');
-                    else if (val < 0.80) row.push('fertile');
+                    else if (val < 0.55) row.push('plain');
+                    else if (val < 0.68) row.push('fertile');
                     else                 row.push('mountain');
                 }
                 rawMap.push(row);

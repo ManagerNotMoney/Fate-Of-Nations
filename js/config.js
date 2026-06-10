@@ -118,7 +118,23 @@
                 allowedTiles: ['mountain'],
                 unique: false,
                 workersRequired: 2,
-                description: 'Только в горах. Добывает 10 монет/ход из золотой руды. Требует 2 шахтёров.'
+                mineModes: ['gold', 'iron', 'copper'],
+                mineModeNames: { gold: 'Золото', iron: 'Железо', copper: 'Медь' },
+                mineModeIcons: { gold: '💰', iron: '⛓️', copper: '🔶' },
+                mineModeProduction: { gold: { money: 10 }, iron: { iron: 3 }, copper: { copper: 3 } },
+                description: 'Только в горах. Добывает золото, железо или медь. Переключайте режим в панели здания. Требует 2 шахтёров.'
+            },
+            factory: {
+                name: 'Завод',
+                icon: '🏭',
+                cost: { money: 120 },
+                production: { money: 5 },
+                consumption: { iron: 2, copper: 1 },
+                turnsToComplete: 3,
+                allowedTiles: ['plain', 'fertile', 'sand'],
+                unique: false,
+                workersRequired: 3,
+                description: 'Промышленное производство. Потребляет 2 железа и 1 медь/ход, производит 5 монет/ход. Требует 3 рабочих.'
             },
             port: {
                 name: 'Порт',
@@ -152,6 +168,8 @@
             bread:      { icon: '🍞', name: 'Хлеб',      color: '#e8834a' },
             apples:     { icon: '🍎', name: 'Яблоки',    color: '#ef4444' },
             fish:       { icon: '🐟', name: 'Рыба',      color: '#38bdf8' },
+            iron:       { icon: '⛓️', name: 'Железо',    color: '#94a3b8' },
+            copper:     { icon: '🔶', name: 'Медь',      color: '#b45309' },
             population: { icon: '👥', name: 'Население',  color: '#4f8ef7' },
             defense:    { icon: '🛡️', name: 'Оборона',   color: '#a78bfa' }
         },

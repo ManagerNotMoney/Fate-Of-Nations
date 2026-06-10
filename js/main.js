@@ -167,6 +167,8 @@
         canvas.dataset.eventsBound = 'true';
 
         canvas.addEventListener('mousedown', e => {
+            // Only left-click (button 0) starts drag; right-click (button 2) is for worker assign
+            if (e.button !== 0) return;
             window.GameState.isDragging = true;
             window.GameState.dragMoved = false;
             window.GameState.dragStartX = e.clientX;
@@ -174,7 +176,7 @@
         });
 
         canvas.addEventListener('mousemove', e => {
-            if (!window.GameState.isDragging) return;
+            if (!window.GameState.isDragging || e.buttons !== 1) return;
             const dx = e.clientX - window.GameState.dragStartX;
             const dy = e.clientY - window.GameState.dragStartY;
             if (Math.abs(dx) > 3 || Math.abs(dy) > 3) window.GameState.dragMoved = true;
@@ -185,8 +187,19 @@
             R.render();
         });
 
-        canvas.addEventListener('mouseup', () => { window.GameState.isDragging = false; });
+        canvas.addEventListener('mouseup', e => {
+            if (e.button === 0) window.GameState.isDragging = false;
+        });
         canvas.addEventListener('mouseleave', () => { window.GameState.isDragging = false; });
+
+        // ПКМ — быстрое назначение/снятие рабочих
+        canvas.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const hex = HM.pixelToHex(e.clientX - rect.left, e.clientY - rect.top);
+            if (!hex) return;
+            if (window.UIPanel) window.UIPanel.quickAssignWorkers(hex.col, hex.row);
+        });
 
         canvas.addEventListener('click', e => {
             if (window.GameState.dragMoved) return;

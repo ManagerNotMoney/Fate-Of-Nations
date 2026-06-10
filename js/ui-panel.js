@@ -78,6 +78,9 @@
                         if (building.type === 'market') {
                             html += this._renderMarketTab(building);
                         }
+                        if (building.type === 'mine') {
+                            html += this._renderMineTab(building);
+                        }
                     }
                     if (inQueue) {
                         const bc = C.BUILDINGS[inQueue.type];
@@ -91,6 +94,7 @@
                     }
                     this.buildingsList.innerHTML = html;
                     this._bindWorkerButtons(col, row);
+                    this._bindMineModeButtons(col, row);
                 } else {
                     this.catBuildings.style.display = 'none';
                     this.buildingsList.innerHTML = '';
@@ -200,11 +204,44 @@
                     </div>
                     ${!isActive && assigned < required ? `<div class="worker-warning">⚠️ Нужно ещё ${required - assigned} рабочих для работы здания</div>` : ''}
                     ${!canAdd && assigned < required ? `<div class="worker-warning" style="color:#f87171">😔 Нет свободных жителей — постройте дома!</div>` : ''}
+                    <div class="worker-hint" style="margin-top:8px;padding:6px 9px;background:rgba(79,142,247,0.06);border:1px solid rgba(79,142,247,0.15);border-radius:7px;font-size:11px;color:var(--accent);line-height:1.4;">🖱️ ПКМ по клетке на карте — быстро назначить всех рабочих</div>
                 </div>
             </div>`;
         },
 
         // ─── Market Tab ───────────────────────────────────────
+        _renderMineTab: function(building) {
+            const cfg = C.BUILDINGS['mine'];
+            const mode = building.mineMode || 'gold';
+            const modes = cfg.mineModes || ['gold'];
+            const modeNames = cfg.mineModeNames || {};
+            const modeIcons = cfg.mineModeIcons || {};
+            const modeProduction = cfg.mineModeProduction || {};
+
+            const modeButtons = modes.map(m => {
+                const isActive = m === mode;
+                const prod = modeProduction[m];
+                const prodStr = prod ? Object.entries(prod).map(([r, a]) => `+${a} ${C.RESOURCES[r]?.icon || r}`).join(' ') : '';
+                return `<button class="mine-mode-btn ${isActive ? 'active' : ''}" data-mode="${m}">
+                    <span class="mine-mode-icon">${modeIcons[m] || '⛏️'}</span>
+                    <span class="mine-mode-name">${modeNames[m] || m}</span>
+                    <span class="mine-mode-prod">${prodStr}</span>
+                </button>`;
+            }).join('');
+
+            return `<div class="info-tab mine-tab">
+                <div class="info-tab-header">
+                    <span class="info-tab-icon">⛏️</span>
+                    <span class="info-tab-title">Режим добычи</span>
+                    <span class="info-tab-badge badge-gold">${modeNames[mode] || mode}</span>
+                </div>
+                <div class="info-tab-body">
+                    <div class="mine-mode-grid">${modeButtons}</div>
+                    <div class="mine-hint">💡 Выберите ресурс для добычи. Переключение мгновенное.</div>
+                </div>
+            </div>`;
+        },
+
         _renderMarketTab: function(building) {
             const income = E.getMarketIncome(HM, building.col, building.row);
             const cfg = C.BUILDINGS['market'];
@@ -240,6 +277,22 @@
                     <div class="market-hint">💡 Стройте дома рядом с рынком для максимального дохода</div>
                 </div>
             </div>`;
+        },
+
+        _bindMineModeButtons: function(col, row) {
+            const modeBtns = this.buildingsList.querySelectorAll('.mine-mode-btn');
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const newMode = btn.dataset.mode;
+                    const b = HM.buildings[col + ',' + row];
+                    if (b && b.type === 'mine') {
+                        b.mineMode = newMode;
+                        if (window.UI) window.UI.showNotification(`⛏️ Режим шахты: ${C.BUILDINGS.mine.mineModeNames[newMode] || newMode}`);
+                        this.openPanel(col, row);
+                        window.Renderer.render();
+                    }
+                });
+            });
         },
 
         _bindWorkerButtons: function(col, row) {
@@ -385,6 +438,59 @@
             } else {
                 if (window.UI) window.UI.showNotification('⚠️ ' + result.reason, 2500);
             }
+        },
+
+        // ─── Quick Worker Assignment (ПКМ) ────────────────────
+        quickAssignWorkers: function(col, row) {
+            const key = col + ',' + row;
+            const building = HM.buildings[key];
+            if (!building) return;
+
+            const bc = C.BUILDINGS[building.type];
+            if (!bc || !bc.workersRequired) {
+                if (window.UI) window.UI.showNotification('ℹ️ Это здание не требует рабочих', 2000);
+                return;
+            }
+
+            const maxWorkers = bc.workersMax || bc.workersRequired;
+
+            // Если уже все назначены — снимаем всех (toggle)
+            if ((building.assignedWorkers || 0) >= maxWorkers) {
+                let removed = 0;
+                while ((building.assignedWorkers || 0) > 0) {
+                    const r = E.removeWorker(HM, col, row);
+                    if (!r.ok) break;
+                    removed++;
+                }
+                if (window.UI) {
+                    window.UI.showNotification(`👤 Убрано рабочих: ${removed}`, 2000);
+                    window.UI.updateResourceBar();
+                }
+            } else {
+                // Назначаем столько, сколько можно
+                let added = 0;
+                while ((building.assignedWorkers || 0) < maxWorkers) {
+                    const r = E.assignWorker(HM, col, row);
+                    if (!r.ok) break;
+                    added++;
+                }
+                if (added > 0) {
+                    if (window.UI) {
+                        window.UI.showNotification(`👷 Назначено рабочих: ${added}`, 2000);
+                        window.UI.updateResourceBar();
+                    }
+                } else {
+                    if (window.UI) window.UI.showNotification('⚠️ Нет свободных жителей — постройте дома!', 2500);
+                }
+            }
+
+            // Обновляем панель если открыта на этой клетке
+            if (window.GameState.selectedCell &&
+                window.GameState.selectedCell.col === col &&
+                window.GameState.selectedCell.row === row) {
+                this.openPanel(col, row);
+            }
+            window.Renderer.render();
         },
 
         // ─── Queue ─────────────────────────────────────────────

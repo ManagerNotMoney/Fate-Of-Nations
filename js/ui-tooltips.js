@@ -152,17 +152,66 @@
             this._setChipTooltip(chip, lines.join('\n'));
         },
 
+        _getIdeologies: function() {
+            const IDEOLOGY_MAP = {
+                farm:        'conservative',
+                mill:        'conservative',
+                mine:        'communist',
+                factory:     'communist',
+                orchard:     'liberal',
+                port:        'liberal',
+                townhall:    'militarist',
+                local_admin: 'militarist',
+                barracks:    'militarist',
+            };
+            const counts = { conservative: 0, communist: 0, liberal: 0, militarist: 0, anarchist: 0 };
+            for (const b of Object.values(HM.buildings)) {
+                const workers = b.assignedWorkers || 0;
+                if (workers > 0) {
+                    const ideo = IDEOLOGY_MAP[b.type];
+                    if (ideo) counts[ideo] += workers;
+                }
+            }
+            counts.anarchist = E.getFreeWorkers(HM);
+            return counts;
+        },
+
         _updatePopTooltip: function() {
             const chip = this._popChipEl();
             if (!chip) return;
             const assigned = E.getTotalAssignedWorkers(HM);
             const free = E.getFreeWorkers(HM);
+            const total = Math.floor(HM.resources.population);
+            const ideo = this._getIdeologies();
+
+            const IDEO_META = {
+                conservative: { icon: '🌾', label: 'Консерваторы',  color: '#86efac', hint: 'Фермы и мельницы' },
+                communist:    { icon: '⚒️',  label: 'Коммунисты',    color: '#f87171', hint: 'Заводы и шахты'  },
+                liberal:      { icon: '🍎', label: 'Либералы',       color: '#fbbf24', hint: 'Яблони,рыбаки'  },
+                militarist:   { icon: '⚔️', label: 'Кратократы',    color: '#a78bfa', hint: 'Ратуша, администрации, казармы' },
+                anarchist:    { icon: '🔥', label: 'Анархисты',      color: '#94a3b8', hint: 'Безработные жители' },
+            };
+
             const lines = [
-                '<b style="color:#4f8ef7">👥 Население</b>',
-                `Всего: ${Math.floor(HM.resources.population)}`,
-                `На работе: ${assigned}`,
-                `Свободно: ${free}`,
+                `<b style="color:#4f8ef7">👥 Население: ${total}</b>`,
+                `<span style="color:var(--muted)">На работе: ${assigned} &nbsp;·&nbsp; Свободно: ${free}</span>`,
+                '',
+                '<b style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.8px;">⚑ Политические фракции</b>',
             ];
+
+            for (const [key, meta] of Object.entries(IDEO_META)) {
+                const n = ideo[key];
+                if (n <= 0) continue;
+                const pct = total > 0 ? Math.round((n / total) * 100) : 0;
+                const bar = '█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10));
+                lines.push(
+                    `<span style="color:${meta.color}">${meta.icon} ${meta.label}</span>` +
+                    `<span style="color:var(--muted);font-size:10px;"> ${n} чел. (${pct}%)</span>` +
+                    `<br><span style="color:${meta.color};font-size:9px;letter-spacing:1px;opacity:.6;">${bar}</span>` +
+                    `<span style="color:var(--muted);font-size:9px;"> ${meta.hint}</span>`
+                );
+            }
+
             this._setChipTooltip(chip, lines.join('\n'));
         },
 
@@ -254,6 +303,17 @@
             if (building.type === 'market') {
                 const income = E.getMarketIncome(HM, building.col, building.row);
                 return `<br><span style="color:#4ade80;font-size:11px;">💰 +${income} монет/ход (1💰 за жителя рядом)</span>` + strikeInfo;
+            }
+            if (building.type === 'mine') {
+                const mode = building.mineMode || 'gold';
+                const modeNames = cfg.mineModeNames || {};
+                const modeProduction = cfg.mineModeProduction || {};
+                const prod = modeProduction[mode];
+                if (prod) {
+                    const prodStr = Object.entries(prod).map(([r, a]) => `+${a} ${C.RESOURCES[r]?.icon || r}`).join(' ');
+                    return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">${modeNames[mode] || mode}: ${prodStr}/ход${suffix}</span>` + strikeInfo;
+                }
+                return strikeInfo;
             }
             if (building.type === 'port') {
                 const assigned = building.assignedWorkers || 0;

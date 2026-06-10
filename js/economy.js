@@ -295,7 +295,7 @@
         computeDeltas: function(hexMap) {
             const d = {
                 money: C.BASE_INCOME,
-                wheat: 0, bread: 0, apples: 0, fish: 0,
+                wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0,
                 population: 0, defense: 0
             };
             const events = [];
@@ -332,6 +332,39 @@
                     continue;
                 }
 
+                if (b.type === 'mine') {
+                    const mode = b.mineMode || 'gold';
+                    const cfgProd = cfg.mineModeProduction?.[mode];
+                    if (cfgProd && this.isBuildingActive(hexMap, b.col, b.row)) {
+                        for (const [res, amt] of Object.entries(cfgProd)) {
+                            d[res] = (d[res] || 0) + amt;
+                        }
+                    } else if (!this.isBuildingActive(hexMap, b.col, b.row)) {
+                        idleBuildings++;
+                    }
+                    continue;
+                }
+
+                if (b.type === 'factory') {
+                    if (this.isBuildingActive(hexMap, b.col, b.row)) {
+                        const ironAvailable = hexMap.resources.iron + d.iron;
+                        const copperAvailable = hexMap.resources.copper + d.copper;
+                        if (ironAvailable >= 2 && copperAvailable >= 1) {
+                            for (const [res, amt] of Object.entries(cfg.production || {})) {
+                                d[res] = (d[res] || 0) + amt;
+                            }
+                            for (const [res, amt] of Object.entries(cfg.consumption || {})) {
+                                d[res] = (d[res] || 0) - amt;
+                            }
+                        } else {
+                            idleBuildings++;
+                        }
+                    } else {
+                        idleBuildings++;
+                    }
+                    continue;
+                }
+
                 if (b.type === 'port') {
                     const assigned = b.assignedWorkers || 0;
                     if (assigned >= cfg.workersRequired) {
@@ -354,8 +387,11 @@
 
                 if (cfg.workersRequired) {
                     if ((b.assignedWorkers || 0) >= cfg.workersRequired) {
-                        for (const [res, amt] of Object.entries(cfg.production || {})) {
-                            d[res] = (d[res] || 0) + amt;
+                        // Skip mine - handled separately with mode switching
+                        if (b.type !== 'mine') {
+                            for (const [res, amt] of Object.entries(cfg.production || {})) {
+                                d[res] = (d[res] || 0) + amt;
+                            }
                         }
                     } else {
                         idleBuildings++;
@@ -390,9 +426,12 @@
             for (const b of buildings) {
                 if (b.type === 'mill' && this.isBuildingActive(hexMap, b.col, b.row)) {
                     const wheatAvailable = hexMap.resources.wheat + d.wheat;
-                    const consumed = Math.min(2, Math.max(0, wheatAvailable));
-                    d.wheat -= consumed;
-                    d.bread += consumed;
+                    if (wheatAvailable >= 2) {
+                        d.wheat -= 2;
+                        d.bread += 2;
+                    } else {
+                        idleBuildings++;
+                    }
                 }
             }
 

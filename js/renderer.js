@@ -13,7 +13,8 @@
         barracks:    { fill: '#a78bfa', stroke: '#6d28d9', radius: 0.28 },
         mine:        { fill: '#71717a', stroke: '#3f3f46', radius: 0.30 },
         port:        { fill: '#0ea5e9', stroke: '#0369a1', radius: 0.30 },
-        local_admin: { fill: '#64748b', stroke: '#334155', radius: 0.32 }
+        local_admin: { fill: '#64748b', stroke: '#334155', radius: 0.32 },
+        factory:     { fill: '#e8795a', stroke: '#c2410c', radius: 0.32 }
     };
 
     window.Renderer = {
@@ -174,6 +175,22 @@
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(cfg.icon, cx, cy);
+            }
+
+            // Mine mode indicator
+            if (type === 'mine' && col !== undefined && row !== undefined) {
+                const b = HM.buildings[col + ',' + row];
+                if (b) {
+                    const mode = b.mineMode || 'gold';
+                    const modeColors = { gold: '#f4b942', iron: '#94a3b8', copper: '#b45309' };
+                    ctx.beginPath();
+                    ctx.arc(cx + s * 0.25, cy - s * 0.25, s * 0.12, 0, Math.PI * 2);
+                    ctx.fillStyle = modeColors[mode] || '#f4b942';
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                    ctx.lineWidth = 1 * HM.zoom;
+                    ctx.stroke();
+                }
             }
 
             // Strike overlay — drawn ON TOP of the building icon

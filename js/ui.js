@@ -76,6 +76,8 @@
             set('resMoney',      res.money,                              del.money);
             set('resFood',       res.bread + res.apples + res.fish,      del.bread + del.apples + del.fish);
             set('resRaw',        res.wheat,                              del.wheat);
+            set('resIron',       res.iron,                               del.iron);
+            set('resCopper',     res.copper,                             del.copper);
             set('resPopulation', res.population,                         del.population);
             set('resDefense',    res.defense,                            del.defense);
 
