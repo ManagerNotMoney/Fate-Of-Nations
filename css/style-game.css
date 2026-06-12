@@ -499,3 +499,178 @@
     padding: 7px 10px; background: rgba(79,142,247,0.05);
     border: 1px solid rgba(79,142,247,0.12); border-radius: 7px;
 }
+
+/* ═══ DEMOLISH & CANCEL BUTTONS ══════════════════════════ */
+.demolish-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%; margin-top: 10px; padding: 9px 16px;
+    background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.28);
+    border-radius: var(--radius-xs); color: #f87171;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all var(--transition); font-family: 'Inter', sans-serif;
+}
+.demolish-btn:hover {
+    background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.55);
+    transform: translateY(-1px);
+}
+
+.cancel-build-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%; margin-top: 8px; padding: 9px 16px;
+    background: rgba(244,185,66,0.07); border: 1px solid rgba(244,185,66,0.28);
+    border-radius: var(--radius-xs); color: var(--gold);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all var(--transition); font-family: 'Inter', sans-serif;
+}
+.cancel-build-btn:hover {
+    background: rgba(244,185,66,0.15); border-color: rgba(244,185,66,0.55);
+    transform: translateY(-1px);
+}
+
+/* ═══ QUEUE CANCEL BUTTON ════════════════════════════════ */
+.queue-cancel-btn {
+    margin-left: auto; padding: 2px 7px;
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 5px; color: #f87171; font-size: 11px;
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+}
+.queue-cancel-btn:hover {
+    background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5);
+}
+
+/* ═══ DYNAMIC PRICE MARKUP BADGE ════════════════════════ */
+.build-price-markup {
+    font-size: 10px; color: #fb923c; font-weight: 700;
+    padding: 1px 5px; background: rgba(251,146,60,0.12);
+    border: 1px solid rgba(251,146,60,0.25); border-radius: 4px;
+    margin-left: 3px;
+}
+
+
+/* ═══ MAP MODE TOGGLE ════════════════════════════════ */
+#mapModeToggle {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    background: linear-gradient(180deg, rgba(14,22,40,0.97) 0%, rgba(8,13,24,0.95) 100%);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border-hi);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    z-index: 85;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+    transition: all 0.3s;
+    min-width: 160px;
+}
+#mapModeToggle:hover {
+    border-color: var(--border-hi);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+}
+
+.map-mode-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.map-mode-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-hi), transparent);
+}
+
+.map-mode-options {
+    display: flex;
+    gap: 6px;
+}
+
+.map-mode-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+    justify-content: center;
+}
+.map-mode-option:hover {
+    border-color: var(--border-hi);
+    background: var(--surface);
+    transform: translateY(-1px);
+}
+.map-mode-option.active {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.12);
+    box-shadow: 0 0 16px rgba(79,142,247,0.15);
+}
+.map-mode-option.active .map-mode-name {
+    color: var(--accent);
+    font-weight: 600;
+}
+.map-mode-option[data-mode="work"].active {
+    border-color: #f4b942;
+    background: rgba(244,185,66,0.12);
+    box-shadow: 0 0 16px rgba(244,185,66,0.15);
+    animation: work-mode-pulse 2s ease-in-out infinite;
+}
+.map-mode-option[data-mode="work"].active .map-mode-name {
+    color: var(--gold);
+}
+
+@keyframes work-mode-pulse {
+    0%,100% { box-shadow: 0 0 12px rgba(244,185,66,0.1); }
+    50%      { box-shadow: 0 0 24px rgba(244,185,66,0.25); }
+}
+
+.map-mode-icon { font-size: 14px; }
+.map-mode-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    transition: color 0.2s;
+}
+
+/* ═══ WORK MODE — IDLE BUILDING HIGHLIGHT ══════════════ */
+/* These classes are applied to hex cells in renderer.js */
+
+/* Idle building glow ring */
+.idle-building-ring {
+    animation: idle-pulse 1.5s ease-in-out infinite;
+}
+@keyframes idle-pulse {
+    0%,100% { opacity: 0.4; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.08); }
+}
+
+/* Idle building marker on the hex itself */
+.hex-idle-marker {
+    position: absolute;
+    pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #mapModeToggle {
+        bottom: 10px;
+        left: 10px;
+        padding: 10px 12px;
+        min-width: 140px;
+    }
+    .map-mode-option {
+        padding: 6px 8px;
+    }
+    .map-mode-name {
+        font-size: 11px;
+    }
+}

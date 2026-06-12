@@ -81,6 +81,12 @@
                         if (building.type === 'mine') {
                             html += this._renderMineTab(building);
                         }
+                        // Demolish button (not for townhall)
+                        if (building.type !== 'townhall') {
+                            html += `<button class="demolish-btn" data-action="demolish" title="Снос безвозвратен">
+                                🗑️ Снести здание
+                            </button>`;
+                        }
                     }
                     if (inQueue) {
                         const bc = C.BUILDINGS[inQueue.type];
@@ -90,11 +96,15 @@
                                 <div class="building-card-name">Строится: ${bc.name}</div>
                                 <div class="building-card-desc">Осталось ходов: ${inQueue.turnsRemaining}</div>
                             </div>
-                        </div>`;
+                        </div>
+                        <button class="cancel-build-btn" data-action="cancel" title="Вернуть базовую стоимость">
+                            ↩️ Отменить строительство (вернуть монеты)
+                        </button>`;
                     }
                     this.buildingsList.innerHTML = html;
                     this._bindWorkerButtons(col, row);
                     this._bindMineModeButtons(col, row);
+                    this._bindCancelDemolishButtons(col, row);
                 } else {
                     this.catBuildings.style.display = 'none';
                     this.buildingsList.innerHTML = '';
@@ -245,9 +255,10 @@
         _renderMarketTab: function(building) {
             const income = E.getMarketIncome(HM, building.col, building.row);
             const cfg = C.BUILDINGS['market'];
-            const radius = cfg.marketRadius || 4;
+            const radius = cfg.marketRadius || 5;
             const perPerson = cfg.moneyPerResident || 1;
-            const nearbyPop = income / perPerson;
+            const nearbyPop = E.getPopulationInRadius(HM, building.col, building.row, radius);
+            const hasCompetitor = E.hasNearbyMarket(HM, building.col, building.row);
 
             return `<div class="info-tab market-tab">
                 <div class="info-tab-header">
@@ -262,7 +273,7 @@
                             <div class="market-stat-val">${radius} клеток</div>
                         </div>
                         <div class="market-stat">
-                            <div class="market-stat-label">Жители рядом</div>
+                            <div class="market-stat-label">Жители в домах рядом</div>
                             <div class="market-stat-val">${nearbyPop} чел.</div>
                         </div>
                         <div class="market-stat">
@@ -274,7 +285,10 @@
                             <div class="market-stat-val" style="color:#f4b942;font-size:16px;">+${income} 💰</div>
                         </div>
                     </div>
-                    <div class="market-hint">💡 Стройте дома рядом с рынком для максимального дохода</div>
+                    ${hasCompetitor
+                        ? `<div class="market-hint" style="color:#f87171">⚠️ Конкуренция! Рядом есть другой рынок — доход снижен в 3 раза</div>`
+                        : `<div class="market-hint">💡 Только жители из домов приносят доход. Держите рынки подальше друг от друга!</div>`
+                    }
                 </div>
             </div>`;
         },
@@ -293,6 +307,44 @@
                     }
                 });
             });
+        },
+
+        _bindCancelDemolishButtons: function(col, row) {
+            const cancelBtn = this.buildingsList.querySelector('.cancel-build-btn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    const result = E.cancelBuild(HM, col, row);
+                    if (result.ok) {
+                        if (window.UI) window.UI.showNotification('↩️ Строительство отменено, монеты возвращены');
+                        if (window.UI) window.UI.updateResourceBar();
+                        this.openPanel(col, row);
+                        window.Renderer.render();
+                    } else {
+                        if (window.UI) window.UI.showNotification('⚠️ ' + result.reason, 2500);
+                    }
+                });
+            }
+
+            const demolishBtn = this.buildingsList.querySelector('.demolish-btn');
+            if (demolishBtn) {
+                demolishBtn.addEventListener('click', () => {
+                    const key = col + ',' + row;
+                    const b = HM.buildings[key];
+                    if (!b) return;
+                    const bc = C.BUILDINGS[b.type];
+                    // Confirm before demolishing
+                    if (!confirm(`Снести «${bc.name}»? Возврат средств не предусмотрен.`)) return;
+                    const result = E.demolishBuilding(HM, col, row);
+                    if (result.ok) {
+                        if (window.UI) window.UI.showNotification(`🗑️ ${bc.name} снесено`);
+                        if (window.UI) window.UI.updateResourceBar();
+                        this.openPanel(col, row);
+                        window.Renderer.render();
+                    } else {
+                        if (window.UI) window.UI.showNotification('⚠️ ' + result.reason, 2500);
+                    }
+                });
+            }
         },
 
         _bindWorkerButtons: function(col, row) {
@@ -379,15 +431,31 @@
 
                 const check = E.canBuild(HM, col, row, type);
 
+                // Dynamic cost
+                const dynCost = E.getDynamicCost(HM, type);
                 let costHtml = '';
                 if (type === 'local_admin') {
-                    const adminCount = Object.values(HM.buildings).filter(b => b.type === 'local_admin').length;
-                    const cost = (adminCount + 1) * 500;
+                    const cost = dynCost.money || 0;
+                    const baseCost = (Object.values(HM.buildings).filter(b => b.type === 'local_admin').length) * 500;
                     costHtml = `💰${cost}`;
                 } else {
-                    costHtml = Object.entries(bc.cost || {}).map(([r, a]) =>
+                    costHtml = Object.entries(dynCost).map(([r, a]) =>
                         `${C.RESOURCES[r] ? C.RESOURCES[r].icon : r}${a}`
                     ).join(' ');
+                }
+
+                // Show markup hint if price is inflated
+                let priceMarkup = '';
+                if (type !== 'local_admin') {
+                    const baseCostEntries = Object.entries(bc.cost || {});
+                    if (baseCostEntries.length > 0) {
+                        const [baseRes, baseAmt] = baseCostEntries[0];
+                        const dynAmt = dynCost[baseRes] || 0;
+                        if (dynAmt > baseAmt) {
+                            const pct = Math.round(((dynAmt - baseAmt) / baseAmt) * 100);
+                            priceMarkup = `<span class="build-price-markup">+${pct}%</span>`;
+                        }
+                    }
                 }
 
                 const turnsHtml = bc.turnsToComplete > 1 ? `<span class="build-turns">${bc.turnsToComplete} хода</span>` : '';
@@ -400,7 +468,7 @@
                     <span class="build-btn-icon">${bc.icon}</span>
                     <div class="build-btn-info">
                         <span class="build-btn-name">${bc.name} ${workersHtml}</span>
-                        <span class="build-btn-cost">${costHtml || 'Бесплатно'} ${turnsHtml}</span>
+                        <span class="build-btn-cost">${costHtml || 'Бесплатно'} ${priceMarkup} ${turnsHtml}</span>
                     </div>
                     ${disabled ? `<span class="build-btn-reason">${check.reason}</span>` : ''}
                 </button>`;
@@ -502,16 +570,36 @@
                     const bc = C.BUILDINGS[q.type];
                     const total = bc.turnsToComplete;
                     const pct = Math.round(((total - q.turnsRemaining) / total) * 100);
-                    return `<div class="queue-item">
+                    return `<div class="queue-item" data-col="${q.col}" data-row="${q.row}">
                         <div class="queue-item-header">
                             <span class="queue-item-icon">${bc.icon}</span>
                             <span class="queue-item-name">${bc.name}</span>
                             <span class="queue-item-turns">${q.turnsRemaining} хода</span>
+                            <button class="queue-cancel-btn" data-col="${q.col}" data-row="${q.row}" title="Отменить и вернуть монеты">✕</button>
                         </div>
                         <div class="queue-item-coords">[${q.col}, ${q.row}] — ${C.TILES[HM.data[q.row][q.col].type].name}</div>
                         <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
                     </div>`;
                 }).join('');
+
+                // Bind cancel buttons in queue
+                this.queueList.querySelectorAll('.queue-cancel-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const c = parseInt(btn.dataset.col);
+                        const r = parseInt(btn.dataset.row);
+                        const result = E.cancelBuild(HM, c, r);
+                        if (result.ok) {
+                            if (window.UI) window.UI.showNotification('↩️ Строительство отменено, монеты возвращены');
+                            if (window.UI) window.UI.updateResourceBar();
+                            this.updateQueue();
+                            if (window.GameState.selectedCell) {
+                                this.openPanel(window.GameState.selectedCell.col, window.GameState.selectedCell.row);
+                            }
+                            window.Renderer.render();
+                        }
+                    });
+                });
             } else {
                 this.queueSection.style.display = 'none';
             }

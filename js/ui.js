@@ -173,6 +173,27 @@
             this._animFrame = requestAnimationFrame(loop);
         },
 
+        // ─── Work Mode Animation ─────────────────────────────
+        startWorkModeAnim: function() {
+            if (this._workAnimFrame) return;
+            const loop = () => {
+                if (window.Renderer && window.Renderer.mapMode !== 'work') {
+                    this._workAnimFrame = null;
+                    return;
+                }
+                window.Renderer.render();
+                this._workAnimFrame = requestAnimationFrame(loop);
+            };
+            this._workAnimFrame = requestAnimationFrame(loop);
+        },
+
+        stopWorkModeAnim: function() {
+            if (this._workAnimFrame) {
+                cancelAnimationFrame(this._workAnimFrame);
+                this._workAnimFrame = null;
+            }
+        },
+
         // ─── Notification ──────────────────────────────────────
         showNotification: function(text, duration) {
             const n = this.notification;
@@ -191,6 +212,7 @@
         // ─── Cleanup ───────────────────────────────────────────
         cleanup: function() {
             if (this._animFrame)  { cancelAnimationFrame(this._animFrame); this._animFrame = null; }
+            if (this._workAnimFrame) { cancelAnimationFrame(this._workAnimFrame); this._workAnimFrame = null; }
             if (this._notifTimer) { clearTimeout(this._notifTimer); this._notifTimer = null; }
             if (this.notification) this.notification.classList.remove('show');
             if (this.panel)  this.panel.closePanel();

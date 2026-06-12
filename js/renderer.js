@@ -20,12 +20,18 @@
     window.Renderer = {
         canvas: null,
         ctx: null,
+        mapMode: 'normal', // 'normal' | 'work'
 
         init: function(canvasId) {
             this.canvas = document.getElementById(canvasId);
             this.ctx = this.canvas.getContext('2d');
             this.resize();
             window.addEventListener('resize', () => this.resize());
+        },
+
+        setMapMode: function(mode) {
+            this.mapMode = mode;
+            this.render();
         },
 
         resize: function() {
@@ -97,6 +103,43 @@
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
+            }
+
+            // ═══ WORK MODE: Idle building hex background tint ═══
+            if (this.mapMode === 'work' && keyBuilding) {
+                const cfg = C.BUILDINGS[keyBuilding.type];
+                if (cfg && cfg.workersRequired) {
+                    const assigned = keyBuilding.assignedWorkers || 0;
+                    const isStrike = window.EventsEngine && window.EventsEngine.getActiveStrike &&
+                        (() => {
+                            const strike = window.EventsEngine.getActiveStrike();
+                            return strike && strike.targetCol === col && strike.targetRow === row;
+                        })();
+                    if (assigned < cfg.workersRequired && !isStrike) {
+                        // Dark red warning tint on the entire hex
+                        ctx.save();
+                        ctx.globalAlpha = 0.18;
+                        ctx.fillStyle = '#ef4444';
+                        ctx.beginPath();
+                        ctx.moveTo(verts[0].x, verts[0].y);
+                        for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+
+                        // Pulsing red border
+                        const pulse = (Math.sin(Date.now() / 500) + 1) / 2;
+                        ctx.save();
+                        ctx.strokeStyle = `rgba(239, 68, 68, ${0.4 + pulse * 0.4})`;
+                        ctx.lineWidth = 2.5 * HM.zoom;
+                        ctx.beginPath();
+                        ctx.moveTo(verts[0].x, verts[0].y);
+                        for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
+                        ctx.closePath();
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
             }
 
             // Grid stroke
@@ -193,11 +236,64 @@
                 }
             }
 
+            // ═══ WORK MODE: Idle building warning overlay ═══
+            if (this.mapMode === 'work' && col !== undefined && row !== undefined) {
+                const b = HM.buildings[col + ',' + row];
+                if (b && cfg && cfg.workersRequired) {
+                    const assigned = b.assignedWorkers || 0;
+                    const isStrike = window.EventsEngine && window.EventsEngine.getActiveStrike &&
+                        (() => {
+                            const strike = window.EventsEngine.getActiveStrike();
+                            return strike && strike.targetCol === col && strike.targetRow === row;
+                        })();
+
+                    if (assigned < cfg.workersRequired && !isStrike) {
+                        // Warning circle overlay
+                        const pulse = (Math.sin(Date.now() / 400) + 1) / 2;
+                        ctx.save();
+                        ctx.globalAlpha = 0.3 + pulse * 0.2;
+                        ctx.fillStyle = '#ef4444';
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        // Warning icon
+                        ctx.save();
+                        ctx.font = (s * 0.35) + 'px serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#fca5a5';
+                        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                        ctx.shadowBlur = 4;
+                        ctx.fillText('⚠️', cx, cy - s * 0.35);
+                        ctx.restore();
+
+                        // Worker shortage text
+                        ctx.save();
+                        ctx.font = (s * 0.22) + 'px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#fca5a5';
+                        ctx.fillText(`${assigned}/${cfg.workersRequired}`, cx, cy + s * 0.35);
+                        ctx.restore();
+
+                        // Red exclamation ring
+                        ctx.save();
+                        ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 + pulse * 0.3})`;
+                        ctx.lineWidth = 2 * HM.zoom;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, s * (style.radius + 0.06 + pulse * 0.04), 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }
+
             // Strike overlay — drawn ON TOP of the building icon
             if (col !== undefined && row !== undefined && window.EventsEngine) {
                 const strike = window.EventsEngine.getActiveStrike();
                 if (strike && strike.targetCol === col && strike.targetRow === row) {
-                    // Semi-transparent yellow circle overlay
                     ctx.save();
                     ctx.globalAlpha = 0.35;
                     ctx.fillStyle = '#fbbf24';
@@ -206,7 +302,6 @@
                     ctx.fill();
                     ctx.restore();
 
-                    // Strike icon on top, larger and clearly visible
                     ctx.save();
                     ctx.font = (s * 0.42) + 'px serif';
                     ctx.textAlign = 'center';
@@ -218,6 +313,50 @@
                     ctx.shadowOffsetY = 1;
                     ctx.fillText('✊', cx, cy);
                     ctx.restore();
+                }
+            }
+
+            // Locust overlay — drawn ON TOP of farm cells
+            if (col !== undefined && row !== undefined && window.EventsEngine) {
+                const locust = window.EventsEngine.getActiveLocust();
+                if (locust && locust.affectedFarms) {
+                    const isAffected = locust.affectedFarms.some(f => f.col === col && f.row === row);
+                    if (isAffected) {
+                        const pulse = (Math.sin(Date.now() / 400) + 1) / 2;
+                        ctx.save();
+                        ctx.globalAlpha = 0.25 + pulse * 0.15;
+                        ctx.fillStyle = '#2d1f0f';
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        ctx.save();
+                        ctx.font = (s * 0.40) + 'px serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#a16207';
+                        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                        ctx.shadowBlur = 5;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 1;
+                        ctx.fillText('🦗', cx, cy - s * 0.05);
+                        ctx.restore();
+
+                        ctx.save();
+                        ctx.fillStyle = '#713f12';
+                        const time = Date.now() / 300;
+                        for (let i = 0; i < 5; i++) {
+                            const angle = time + (i * Math.PI * 2 / 5);
+                            const dist = s * 0.15 + Math.sin(time * 2 + i) * s * 0.05;
+                            const dx = cx + Math.cos(angle) * dist;
+                            const dy = cy + Math.sin(angle) * dist + s * 0.05;
+                            ctx.beginPath();
+                            ctx.arc(dx, dy, s * 0.04, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    }
                 }
             }
         }

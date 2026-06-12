@@ -3,104 +3,119 @@
 
     /**
      * ════════════════════════════════════════════════════════
-     *  EVENTS ENGINE
-     *  Manages random world events that fire every 7–15 turns.
+     *  EVENTS ENGINE  v0.0.3
      *
-     *  HOW TO ADD A NEW EVENT:
-     *  1. Add an entry to EventsEngine.REGISTRY below.
-     *  2. Each entry must have:
-     *       id        {string}   – unique key
-     *       name      {string}   – display name
-     *       icon      {string}   – emoji shown in notification
-     *       condition {function(hexMap) → bool}  – optional guard
-     *       apply     {function(hexMap) → result}
-     *         result: { message, duration?, detail? }
-     *           message  – notification text shown to player
-     *           duration – ms to show notification (default 4500)
-     *           detail   – extra internal data (optional)
-     *  3. That's it. The scheduler picks events randomly from REGISTRY.
+     *  Два типа ивентов:
+     *
+     *  МИРОВЫЕ (scope: 'world')
+     *    apply(hexMap) → { message, duration?, detail?: { targetCol, targetRow } }
+     *
+     *  ЛОКАЛЬНЫЕ (scope: 'local')
+     *    apply(hexMap) → LocalEventResult:
+     *    {
+     *      message,
+     *      targetCol, targetRow,
+     *      choices: [ { label, icon, apply(hexMap) → { message, ok } } ],
+     *      onClose?(hexMap)   ← вызывается если игрок закрыл модал без выбора
+     *    }
+     *
+     *  ВАЖНО ДЛЯ ЛОКАЛЬНЫХ:
+     *    Любой необратимый эффект (уничтожение здания, смерть рабочего) должен
+     *    произойти СРАЗУ в apply(), ДО возврата результата.
+     *    Варианты choices — это способы ОТМЕНИТЬ или СМЯГЧИТЬ эффект.
+     *    onClose() вызывается когда игрок закрывает окно без нажатия кнопки —
+     *    нужен если надо что-то финализировать (например, уведомить).
+     *
+     *  КАК ДОБАВИТЬ НОВЫЙ ИВЕНТ:
+     *  1. Добавь объект в REGISTRY.
+     *  2. scope:'world' → apply возвращает { message }
+     *  3. scope:'local' → apply сразу применяет эффект, возвращает { message, targetCol, targetRow, choices }
+     *  4. Готово.
      * ════════════════════════════════════════════════════════
      */
     window.EventsEngine = {
 
         // ─── Internal state ────────────────────────────────
-        _nextEventTurn: 0,          // turn on which the next event fires
-        _activeEffects: [],         // [ { type, turnsLeft, ...params } ]
+        _nextEventTurn: 0,
+        _activeEffects: [],
 
         // ─── Public ────────────────────────────────────────
 
-        /** Call once per new game to reset state. */
         reset: function() {
             this._nextEventTurn = this._rollNextTurn(1);
             this._activeEffects = [];
         },
 
-        /**
-         * Called by HexMap.processTurn() before economy is calculated.
-         * Returns an array of event result objects that UI should display.
-         * Active multi-turn effects are also ticked here.
-         */
         processTurn: function(hexMap, currentTurn) {
             const fired = [];
 
-            // Tick active effects
             this._activeEffects = this._activeEffects.filter(e => {
                 e.turnsLeft--;
                 return e.turnsLeft > 0;
             });
 
-            // Try to fire scheduled event
             if (currentTurn >= this._nextEventTurn) {
                 const event = this._pickEvent(hexMap);
                 if (event) {
-                    const result = event.apply(hexMap);
-                    result.id   = event.id;
-                    result.icon = event.icon;
-                    result.name = event.name;
+                    const result  = event.apply(hexMap);
+                    result.id     = event.id;
+                    result.icon   = event.icon;
+                    result.name   = event.name;
+                    result.scope  = event.scope || 'world';
                     fired.push(result);
                 }
-                // Always reschedule, even if no eligible event found
                 this._nextEventTurn = this._rollNextTurn(currentTurn);
             }
 
             return fired;
         },
 
-        /**
-         * Applies active multi-turn effects to deltas.
-         * Called by EconomyEngine.computeDeltas().
-         */
         applyActiveEffects: function(hexMap, deltas) {
             for (const effect of this._activeEffects) {
                 if (effect.type === 'drought') {
-                    // Reduce wheat production from farms
                     const farms = Object.values(hexMap.buildings).filter(b => b.type === 'farm');
                     deltas.wheat -= Math.min(farms.length * effect.reduction, deltas.wheat);
-                    // Reduce apple production from orchards
                     const orchards = Object.values(hexMap.buildings).filter(b => b.type === 'orchard');
                     deltas.apples -= Math.min(orchards.length * effect.reduction, deltas.apples);
                 }
-                if (effect.type === 'strike') {
-                    // Strike disables a specific building's production
-                    // Handled in computeDeltas via _strikeTarget
+                if (effect.type === 'locust') {
+                    // Саранча останавливает все фермы — обнуляем производство пшеницы
+                    const farms = Object.values(hexMap.buildings).filter(b => b.type === 'farm');
+                    deltas.wheat -= Math.min(farms.length * 3, deltas.wheat);
                 }
+                // strike: handled in computeDeltas via getActiveStrike()
             }
         },
 
-        /** Returns active drought effect, or null. Used by UI for status display. */
         getActiveDrought: function() {
             return this._activeEffects.find(e => e.type === 'drought') || null;
         },
 
-        /** Returns active strike effect, or null. */
         getActiveStrike: function() {
             return this._activeEffects.find(e => e.type === 'strike') || null;
+        },
+
+        getActiveLocust: function() {
+            return this._activeEffects.find(e => e.type === 'locust') || null;
+        },
+
+        /**
+         * Resolve a player choice for a local event.
+         * @param {object} hexMap
+         * @param {object} pendingEvent  — LocalEventResult stored by UI
+         * @param {number} choiceIndex
+         * @returns {{ message, ok }}
+         */
+        resolveChoice: function(hexMap, pendingEvent, choiceIndex) {
+            const choice = pendingEvent.choices[choiceIndex];
+            if (!choice) return { message: 'Неизвестный выбор', ok: false };
+            return choice.apply(hexMap);
         },
 
         // ─── Private helpers ───────────────────────────────
 
         _rollNextTurn: function(fromTurn) {
-            return fromTurn + 7 + Math.floor(Math.random() * 9); // 7–15
+            return fromTurn + 7 + Math.floor(Math.random() * 9);
         },
 
         _pickEvent: function(hexMap) {
@@ -113,278 +128,436 @@
 
         // ════════════════════════════════════════════════════
         //  EVENT REGISTRY
-        //  Add new events here — no other file needs touching.
         // ════════════════════════════════════════════════════
         REGISTRY: [
 
-            // ── 1. ЗАСУХА ───────────────────────────────────
+            // ══════════════════════════════════════════════
+            //  МИРОВЫЕ СОБЫТИЯ (scope: 'world')
+            // ══════════════════════════════════════════════
+
+            // ── 1. ЗАСУХА ────────────────────────────────
             {
-                id:   'drought',
-                name: 'Засуха',
-                icon: '☀️',
-                condition: function(hexMap) {
-                    // Only relevant if player has farms or orchards
-                    return Object.values(hexMap.buildings).some(
-                        b => b.type === 'farm' || b.type === 'orchard'
-                    );
+                id: 'drought', name: 'Засуха', icon: '☀️', scope: 'world',
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'farm' || b.type === 'orchard');
                 },
-                apply: function(hexMap) {
-                    const duration   = 3 + Math.floor(Math.random() * 3); // 3–5 turns
-                    const reduction  = 1; // -1 unit per farm/orchard per turn
-                    window.EventsEngine._activeEffects.push({
-                        type: 'drought', turnsLeft: duration, reduction
-                    });
-                    return {
-                        message:  `☀️ Засуха! Урожай пшеницы и яблок падает на 1 в течение ${duration} ходов.`,
-                        duration: 5000
-                    };
+                apply: function(hm) {
+                    const duration = 3 + Math.floor(Math.random() * 3);
+                    window.EventsEngine._activeEffects.push({ type: 'drought', turnsLeft: duration, reduction: 1 });
+                    return { message: `Засуха накрыла земли. Урожай пшеницы и яблок падает на 1 в течение ${duration} ходов.`, duration: 5000 };
                 }
             },
 
-            // ── 2. МИГРАЦИЯ ─────────────────────────────────
+            // ── 2. МИГРАЦИЯ ──────────────────────────────
             {
-                id:   'migration',
-                name: 'Миграция',
-                icon: '🚶',
-                condition: function(hexMap) {
-                    return hexMap.resources.population >= 5;
-                },
-                apply: function(hexMap) {
-                    const pct  = 0.10 + Math.random() * 0.10;         // 10–20 %
-                    const lost = Math.max(1, Math.floor(hexMap.resources.population * pct));
-                    hexMap.resources.population = Math.max(0, hexMap.resources.population - lost);
-                    return {
-                        message:  `🚶 Миграция! ${lost} жителей покинули страну (${Math.round(pct * 100)}% населения).`,
-                        duration: 5000
-                    };
+                id: 'migration', name: 'Миграция', icon: '🚶', scope: 'world',
+                condition: function(hm) { return hm.resources.population >= 5; },
+                apply: function(hm) {
+                    const pct  = 0.10 + Math.random() * 0.10;
+                    const lost = Math.max(1, Math.floor(hm.resources.population * pct));
+                    hm.resources.population = Math.max(0, hm.resources.population - lost);
+                    return { message: `${lost} жителей (${Math.round(pct * 100)}% населения) покинули страну.`, duration: 5000 };
                 }
             },
 
-            // ── 3. НАБЕГ ────────────────────────────────────
+            // ── 3. НАБЕГ ─────────────────────────────────
             {
-                id:   'raid',
-                name: 'Набег',
-                icon: '⚔️',
-                condition: function(hexMap) {
-                    // Only fires when there's something to lose
-                    return hexMap.resources.money > 0 || hexMap.resources.bread > 0 || hexMap.resources.defense > 0;
-                },
-                apply: function(hexMap) {
-                    const pop     = Math.floor(hexMap.resources.population);
-                    const defense = Math.floor(hexMap.resources.defense);
-                    if (defense < pop) {
-                        // Overwhelmed — lose all money and bread
-                        const lostMoney = hexMap.resources.money;
-                        const lostBread = hexMap.resources.bread;
-                        hexMap.resources.money = 0;
-                        hexMap.resources.bread = 0;
-                        return {
-                            message: `⚔️ Набег! Защиты не хватило — разграблено ${lostMoney} 💰 и ${lostBread} 🍞!`,
-                            duration: 6000
-                        };
+                id: 'raid', name: 'Набег', icon: '⚔️', scope: 'world',
+                condition: function(hm) { return hm.resources.money > 0 || hm.resources.bread > 0; },
+                apply: function(hm) {
+                    if (hm.resources.defense < Math.floor(hm.resources.population)) {
+                        const lostMoney = hm.resources.money;
+                        const lostBread = hm.resources.bread;
+                        hm.resources.money = 0;
+                        hm.resources.bread = 0;
+                        return { message: `Защиты не хватило — разграблено ${lostMoney} 💰 и ${lostBread} 🍞! Постройте казармы.`, duration: 6000 };
                     } else {
-                        // Repelled — but all defense points spent
-                        const spent = hexMap.resources.defense;
-                        hexMap.resources.defense = 0;
-                        return {
-                            message: `⚔️ Набег отражён! Потрачено ${spent} 🛡️ очков обороны.`,
-                            duration: 5000
-                        };
+                        const spent = hm.resources.defense;
+                        hm.resources.defense = 0;
+                        return { message: `Набег отражён! Потрачено ${spent} 🛡️ очков обороны.`, duration: 5000 };
                     }
                 }
             },
 
-            // ── 4. ХОРОШИЙ УРОЖАЙ ───────────────────────────
+            // ── 4. ХОРОШИЙ УРОЖАЙ ────────────────────────
             {
-                id:   'good_harvest',
-                name: 'Хороший урожай',
-                icon: '🌻',
-                condition: function(hexMap) {
-                    return Object.values(hexMap.buildings).some(b => b.type === 'farm');
-                },
-                apply: function(hexMap) {
-                    const farms  = Object.values(hexMap.buildings).filter(b => b.type === 'farm');
-                    const bonus  = farms.length * 5;
-                    hexMap.resources.wheat += bonus;
+                id: 'good_harvest', name: 'Хороший урожай', icon: '🌻', scope: 'world',
+                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'farm'); },
+                apply: function(hm) {
+                    const farms = Object.values(hm.buildings).filter(b => b.type === 'farm');
+                    const bonus = farms.length * 5;
+                    hm.resources.wheat += bonus;
+                    return { message: `Каждая из ${farms.length} ферм дала щедрый урожай. Итого: +${bonus} 🌾`, duration: 4500 };
+                }
+            },
+
+            // ── 5. МОРСКАЯ УДАЧА ─────────────────────────
+            {
+                id: 'sea_fortune', name: 'Морская удача', icon: '⚓', scope: 'world',
+                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'port'); },
+                apply: function(hm) {
+                    const ports = Object.values(hm.buildings).filter(b => b.type === 'port');
+                    const pct   = 0.15 + Math.random() * 0.05;
+                    const bonus = Math.floor(hm.resources.money * pct);
+                    hm.resources.money += bonus;
+                    return { message: `${ports.length} порт(а) поймали удачный ветер — дополнительно ${bonus} 💰 (+${Math.round(pct * 100)}%).`, duration: 5000 };
+                }
+            },
+
+            // ── 6. АЛМАЗЫ ────────────────────────────────
+            {
+                id: 'diamonds', name: 'Алмазы!', icon: '💎', scope: 'world',
+                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'mine'); },
+                apply: function(hm) {
+                    const pct   = 0.05 + Math.random() * 0.05;
+                    const bonus = Math.floor(hm.resources.money * pct);
+                    hm.resources.money += bonus;
+                    return { message: `Шахтёры нашли драгоценные камни! +${bonus} 💰 (+${Math.round(pct * 100)}%).`, duration: 5000 };
+                }
+            },
+
+            // ── 7. БОЛЬШЕ ЯБЛОК ──────────────────────────
+            {
+                id: 'more_apples', name: 'Больше яблок!', icon: '🍎', scope: 'world',
+                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'orchard'); },
+                apply: function(hm) {
+                    const orchards = Object.values(hm.buildings).filter(b => b.type === 'orchard');
+                    const bonusPer = 3 + Math.floor(Math.random() * 3);
+                    const total    = orchards.length * bonusPer;
+                    hm.resources.apples += total;
+                    return { message: `Каждый сад дал +${bonusPer} яблок. Итого: +${total} 🍎`, duration: 4500 };
+                }
+            },
+
+            // ══════════════════════════════════════════════
+            //  ЛОКАЛЬНЫЕ СОБЫТИЯ (scope: 'local')
+            //  ПРАВИЛО: необратимый эффект применяется СРАЗУ в apply().
+            //  choices — способы отменить/смягчить его.
+            //  onClose — вызывается при закрытии без выбора.
+            // ══════════════════════════════════════════════
+
+            // ── 8. КОРРУПЦИЯ (переработанный) ─────────────
+            {
+                id: 'corruption', name: 'Коррупция', icon: '🕵️', scope: 'local',
+                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'local_admin'); },
+                apply: function(hm) {
+                    const admins = Object.values(hm.buildings).filter(b => b.type === 'local_admin');
+                    const pct  = 0.03 + Math.random() * 0.07;
+                    const stolen = Math.floor(hm.resources.money * pct);
+                    const targetAdmin = admins[Math.floor(Math.random() * admins.length)];
+                    const col = targetAdmin.col;
+                    const row = targetAdmin.row;
+
+                    // ── НЕОБРАТИМЫЙ ЭФФЕКТ ПРИМЕНЯЕТСЯ СРАЗУ ──
+                    hm.resources.money = Math.max(0, hm.resources.money - stolen);
+
                     return {
-                        message:  `🌻 Хороший урожай! Каждая из ${farms.length} ферм дала +5 пшеницы. Итого: +${bonus} 🌾`,
-                        duration: 4500
+                        message: `В администрации [${col}, ${row}] разгорелся коррупционный скандал! Чиновники похитили ${stolen} 💰 (${Math.round(pct * 100)}%).`,
+                        targetCol: col,
+                        targetRow: row,
+                        choices: [
+                            {
+                                label: `Посадить чиновника (−30 🛡️, вернуть ${stolen} 💰)`,
+                                icon: '⚖️',
+                                apply: function(hm) {
+                                    if (hm.resources.defense < 30) {
+                                        return { message: 'Не хватает 30 🛡️ для ареста. Деньги потеряны.', ok: false };
+                                    }
+                                    hm.resources.defense -= 30;
+                                    hm.resources.money += stolen;
+                                    return { message: `Чиновник посажен! Возвращено ${stolen} 💰. Потрачено 30 🛡️.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Принять потерю',
+                                icon: '😔',
+                                apply: function(hm) {
+                                    return { message: `Коррупционный скандал замяли. ${stolen} 💰 потеряны навсегда.`, ok: true };
+                                }
+                            }
+                        ]
                     };
                 }
             },
 
-            // ── 5. НЕСЧАСТНЫЙ СЛУЧАЙ ────────────────────────
+            // ── 9. ПОЖАР ─────────────────────────────────
             {
-                id:   'accident',
-                name: 'Несчастный случай',
-                icon: '💀',
-                condition: function(hexMap) {
-                    // Need at least one building with a worker
-                    return Object.values(hexMap.buildings).some(b => (b.assignedWorkers || 0) > 0);
-                },
-                apply: function(hexMap) {
-                    // Collect all buildings that have at least 1 worker
-                    const active = Object.values(hexMap.buildings).filter(
-                        b => (b.assignedWorkers || 0) > 0
-                    );
-                    // Pick one at random and remove one worker
-                    const target = active[Math.floor(Math.random() * active.length)];
-                    target.assignedWorkers = Math.max(0, (target.assignedWorkers || 1) - 1);
-                    hexMap.resources.population = Math.max(0, hexMap.resources.population - 1);
-                    const cfg  = window.GameConfig.BUILDINGS[target.type];
-                    const name = cfg ? cfg.icon + ' ' + cfg.name : target.type;
-                    return {
-                        message:  `💀 Несчастный случай! Работник в «${name}» погиб.`,
-                        duration: 5000
-                    };
-                }
-            },
-
-            // ── 6. ПОЖАР ────────────────────────────────────
-            {
-                id:   'fire',
-                name: 'Пожар',
-                icon: '🔥',
-                condition: function(hexMap) {
-                    // Need at least one destroyable building
-                    return Object.values(hexMap.buildings).some(
+                id: 'fire', name: 'Пожар', icon: '🔥', scope: 'local',
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(
                         b => b.type !== 'townhall' && b.type !== 'local_admin'
                     );
                 },
-                apply: function(hexMap) {
-                    const destroyable = Object.values(hexMap.buildings).filter(
+                apply: function(hm) {
+                    const destroyable = Object.values(hm.buildings).filter(
                         b => b.type !== 'townhall' && b.type !== 'local_admin'
                     );
                     const target = destroyable[Math.floor(Math.random() * destroyable.length)];
-                    const cfg = window.GameConfig.BUILDINGS[target.type];
-                    const name = cfg ? cfg.icon + ' ' + cfg.name : target.type;
-                    // Remove workers back to free pool (population is kept, just reassigned)
-                    // building is simply deleted — auto-cleanup handles excess workers
-                    delete hexMap.buildings[target.col + ',' + target.row];
-                    hexMap.recalculateTerritory();
+                    const cfg    = window.GameConfig.BUILDINGS[target.type];
+                    const name   = cfg ? cfg.icon + ' ' + cfg.name : target.type;
+                    const col    = target.col;
+                    const row    = target.row;
+                    const snapshot = Object.assign({}, target);
+
+                    delete hm.buildings[col + ',' + row];
+                    hm.recalculateTerritory();
+
                     return {
-                        message:  `Пожар уничтожил ${name} [${target.col}, ${target.row}]! Здание сгорело дотла.`,
-                        duration: 5500
+                        message:   `В районе [${col}, ${row}] вспыхнул пожар! ${name} уничтожено.`,
+                        targetCol: col,
+                        targetRow: row,
+                        choices: [
+                            {
+                                label: 'Восстановить (−80 💰)',
+                                icon:  '🚒',
+                                apply: function(hm) {
+                                    if (hm.resources.money < 80) {
+                                        return { message: 'Не хватает 80 💰. Здание не удалось восстановить.', ok: false };
+                                    }
+                                    hm.resources.money -= 80;
+                                    hm.buildings[col + ',' + row] = snapshot;
+                                    hm.recalculateTerritory();
+                                    return { message: `Пожарные отстроили ${name} заново. Потрачено 80 💰.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Принять потерю',
+                                icon:  '😔',
+                                apply: function(hm) {
+                                    return { message: `${name} сгорело. Место расчищено.`, ok: true };
+                                }
+                            }
+                        ]
                     };
                 }
             },
 
-            // ── 7. МОРСКАЯ УДАЧА ───────────────────────────
+            // ── 10. НЕСЧАСТНЫЙ СЛУЧАЙ ────────────────────
             {
-                id:   'sea_fortune',
-                name: 'Морская удача',
-                icon: '⚓',
-                condition: function(hexMap) {
-                    return Object.values(hexMap.buildings).some(b => b.type === 'port');
+                id: 'accident', name: 'Несчастный случай', icon: '💀', scope: 'local',
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => (b.assignedWorkers || 0) > 0);
                 },
-                apply: function(hexMap) {
-                    const ports = Object.values(hexMap.buildings).filter(b => b.type === 'port');
-                    const pct   = 0.15 + Math.random() * 0.05; // 15–20%
-                    const bonus = Math.floor(hexMap.resources.money * pct);
-                    hexMap.resources.money += bonus;
+                apply: function(hm) {
+                    const active = Object.values(hm.buildings).filter(b => (b.assignedWorkers || 0) > 0);
+                    const target = active[Math.floor(Math.random() * active.length)];
+                    const cfg    = window.GameConfig.BUILDINGS[target.type];
+                    const name   = cfg ? cfg.icon + ' ' + cfg.name : target.type;
+                    const col    = target.col;
+                    const row    = target.row;
+
+                    target.assignedWorkers = Math.max(0, (target.assignedWorkers || 1) - 1);
+                    hm.resources.population = Math.max(0, hm.resources.population - 1);
+
                     return {
-                        message:  `⚓ Морская удача! ${ports.length} порт(а) принёс(ли) дополнительно ${bonus} 💰 (+${Math.round(pct * 100)}% к бюджету).`,
-                        duration: 5000
+                        message:   `Работник в «${name}» [${col}, ${row}] получил тяжёлую травму и может скончаться.`,
+                        targetCol: col,
+                        targetRow: row,
+                        choices: [
+                            {
+                                label: 'Оплатить Лечение (−50 💰)',
+                                icon:  '🏥',
+                                apply: function(hm) {
+                                    if (hm.resources.money < 50) {
+                                        return { message: 'Не хватает 50 💰 для лечения.', ok: false };
+                                    }
+                                    hm.resources.money -= 50;
+                                    target.assignedWorkers = (target.assignedWorkers || 0) + 1;
+                                    hm.resources.population += 1;
+                                    return { message: `Работник выздоровел и вернулся в «${name}». Потрачено 50 💰.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Принять потерю',
+                                icon:  '😞',
+                                apply: function(hm) {
+                                    return { message: `Работник в «${name}» погиб. Население −1.`, ok: true };
+                                }
+                            }
+                        ]
                     };
                 }
             },
 
-            // ── 8. АЛМАЗЫ! ──────────────────────────────────
+            // ── 11. ЗАБАСТОВКА ───────────────────────────
             {
-                id:   'diamonds',
-                name: 'Алмазы!',
-                icon: '💎',
-                condition: function(hexMap) {
-                    return Object.values(hexMap.buildings).some(b => b.type === 'mine');
+                id: 'strike', name: 'Забастовка!', icon: '✊', scope: 'local',
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'mill' || b.type === 'mine');
                 },
-                apply: function(hexMap) {
-                    const mines = Object.values(hexMap.buildings).filter(b => b.type === 'mine');
-                    const pct   = 0.05 + Math.random() * 0.05; // 5–10%
-                    const bonus = Math.floor(hexMap.resources.money * pct);
-                    hexMap.resources.money += bonus;
-                    return {
-                        message:  `💎 Алмазы! Шахтёры нашли драгоценные камни! +${bonus} 💰 (+${Math.round(pct * 100)}% к бюджету).`,
-                        duration: 5000
-                    };
-                }
-            },
+                apply: function(hm) {
+                    const targets  = Object.values(hm.buildings).filter(b => b.type === 'mill' || b.type === 'mine');
+                    const target   = targets[Math.floor(Math.random() * targets.length)];
+                    const duration = 3 + Math.floor(Math.random() * 4);
+                    const cfg      = window.GameConfig.BUILDINGS[target.type];
+                    const name     = cfg ? cfg.icon + ' ' + cfg.name : target.type;
+                    const col      = target.col;
+                    const row      = target.row;
 
-            // ── 9. БОЛЬШЕ ЯБЛОК! ───────────────────────────
-            {
-                id:   'more_apples',
-                name: 'Больше яблок!',
-                icon: '🍎',
-                condition: function(hexMap) {
-                    return Object.values(hexMap.buildings).some(b => b.type === 'orchard');
-                },
-                apply: function(hexMap) {
-                    const orchards = Object.values(hexMap.buildings).filter(b => b.type === 'orchard');
-                    const bonusPer = 3 + Math.floor(Math.random() * 3); // 3–5
-                    const totalBonus = orchards.length * bonusPer;
-                    hexMap.resources.apples += totalBonus;
-                    return {
-                        message:  `🍎 Больше яблок! Каждый сад дал +${bonusPer} яблок. Итого: +${totalBonus} яблок.`,
-                        duration: 4500
-                    };
-                }
-            },
-
-            // ── 10. ЗАБАСТОВКА! ─────────────────────────────
-            {
-                id:   'strike',
-                name: 'Забастовка!',
-                icon: '✊',
-                condition: function(hexMap) {
-                    // Need at least one mill or mine
-                    return Object.values(hexMap.buildings).some(
-                        b => b.type === 'mill' || b.type === 'mine'
-                    );
-                },
-                apply: function(hexMap) {
-                    const targets = Object.values(hexMap.buildings).filter(
-                        b => b.type === 'mill' || b.type === 'mine'
-                    );
-                    const target = targets[Math.floor(Math.random() * targets.length)];
-                    const duration = 3 + Math.floor(Math.random() * 4); // 3–6 turns
-                    const cfg = window.GameConfig.BUILDINGS[target.type];
-                    const name = cfg ? cfg.icon + ' ' + cfg.name : target.type;
                     window.EventsEngine._activeEffects.push({
-                        type: 'strike',
-                        turnsLeft: duration,
-                        targetCol: target.col,
-                        targetRow: target.row,
-                        targetType: target.type
+                        type: 'strike', turnsLeft: duration,
+                        targetCol: col, targetRow: row, targetType: target.type
                     });
+
+                    const _endStrike = function() {
+                        window.EventsEngine._activeEffects = window.EventsEngine._activeEffects.filter(
+                            e => !(e.type === 'strike' && e.targetCol === col && e.targetRow === row)
+                        );
+                    };
+
                     return {
-                        message:  `✊ Забастовка! Рабочие ${name} [${target.col}, ${target.row}] отказываются работать на ${duration} ходов!`,
-                        duration: 5500,
-                        detail: { targetCol: target.col, targetRow: target.row, targetType: target.type }
+                        message:   `Рабочие «${name}» [${col}, ${row}] объявили забастовку! Здание простаивает ${duration} ходов.`,
+                        targetCol: col,
+                        targetRow: row,
+                        choices: [
+                            {
+                                label: 'Выдать премии (−300 💰)',
+                                icon:  '💸',
+                                apply: function(hm) {
+                                    if (hm.resources.money < 300) {
+                                        return { message: 'Не хватает 300 💰. Забастовка продолжается.', ok: false };
+                                    }
+                                    hm.resources.money -= 300;
+                                    _endStrike();
+                                    return { message: `Премии выплачены — рабочие «${name}» вернулись к работе.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Подавить (−100 🛡️)',
+                                icon:  '⚔️',
+                                apply: function(hm) {
+                                    if (hm.resources.defense < 100) {
+                                        return { message: 'Не хватает 100 🛡️ для подавления. Забастовка продолжается.', ok: false };
+                                    }
+                                    hm.resources.defense -= 100;
+                                    _endStrike();
+                                    return { message: `Забастовка подавлена силой. «${name}» возобновляет работу. −100 🛡️.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Игнорировать',
+                                icon:  '🤷',
+                                apply: function(hm) {
+                                    return { message: `Забастовка в «${name}» продолжится ещё ${duration} ходов.`, ok: true };
+                                }
+                            }
+                        ]
                     };
                 }
             },
 
-            // ── 11. КОРРУПЦИЯ ──────────────────────────────
+            // ── 12. САРАНЧА ───────────────────────────────
             {
-                id:   'corruption',
-                name: 'Коррупция',
-                icon: '🕵️',
-                condition: function(hexMap) {
-                    return Object.values(hexMap.buildings).some(b => b.type === 'local_admin');
+                id: 'locust', name: 'Нашествие саранчи', icon: '🦗', scope: 'local',
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'farm');
                 },
-                apply: function(hexMap) {
-                    const admins = Object.values(hexMap.buildings).filter(b => b.type === 'local_admin');
-                    const pct    = 0.03 + Math.random() * 0.07; // 3–10%
-                    const lost   = Math.floor(hexMap.resources.money * pct);
-                    hexMap.resources.money = Math.max(0, hexMap.resources.money - lost);
+                apply: function(hm) {
+                    const farms = Object.values(hm.buildings).filter(b => b.type === 'farm');
+                    const duration = 3 + Math.floor(Math.random() * 3); // 3–5 ходов
+                    const farmCount = farms.length;
+                    const disinfectCost = farmCount * 15;
+
+                    // ── НЕОБРАТИМЫЙ ЭФФЕКТ ПРИМЕНЯЕТСЯ СРАЗУ ──
+                    // Сохраняем список ферм для визуального оверлея
+                    const affectedFarms = farms.map(f => ({ col: f.col, row: f.row }));
+                    window.EventsEngine._activeEffects.push({
+                        type: 'locust', turnsLeft: duration,
+                        affectedFarms: affectedFarms
+                    });
+
+                    const _endLocust = function() {
+                        window.EventsEngine._activeEffects = window.EventsEngine._activeEffects.filter(
+                            e => e.type !== 'locust'
+                        );
+                    };
+
                     return {
-                        message:  `🕵️ Коррупция! Чиновники в ${admins.length} администраци${admins.length === 1 ? 'и' : 'ях'} украли ${lost} 💰 (${Math.round(pct * 100)}% бюджета).`,
-                        duration: 5500
+                        message: `Чёрное облако саранчи накрыло поля! ${farmCount} ферм${farmCount === 1 ? 'а' : ''} парализовано — урожай уничтожается на глазах. Нашествие продлится ${duration} ходов.`,
+                        choices: [
+                            {
+                                label: `Дезинфицировать поля (−${disinfectCost} 💰)`,
+                                icon: '🧪',
+                                apply: function(hm) {
+                                    if (hm.resources.money < disinfectCost) {
+                                        return { message: `Не хватает ${disinfectCost} 💰 для дезинфекции. Саранча продолжает пожирать урожай!`, ok: false };
+                                    }
+                                    hm.resources.money -= disinfectCost;
+                                    _endLocust();
+                                    return { message: `Поля обработаны специальными реагентами. Саранча отступает! Потрачено ${disinfectCost} 💰.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Принять потерю',
+                                icon: '🌾',
+                                apply: function(hm) {
+                                    return { message: `Саранча продолжает пожирать урожай. Фермы простаивают ещё ${duration} ходов.`, ok: true };
+                                }
+                            }
+                        ]
+                    };
+                }
+            },
+
+            // ── 13. ОБВАЛ ─────────────────────────────────
+            {
+                id: 'landslide', name: 'Обвал в шахте', icon: '⛰️', scope: 'local',
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'mine');
+                },
+                apply: function(hm) {
+                    const mines = Object.values(hm.buildings).filter(b => b.type === 'mine');
+                    const target = mines[Math.floor(Math.random() * mines.length)];
+                    const cfg    = window.GameConfig.BUILDINGS[target.type];
+                    const name   = cfg ? cfg.icon + ' ' + cfg.name : target.type;
+                    const col    = target.col;
+                    const row    = target.row;
+                    const snapshot = Object.assign({}, target);
+
+                    // ── НЕОБРАТИМЫЙ ЭФФЕКТ ПРИМЕНЯЕТСЯ СРАЗУ ──
+                    delete hm.buildings[col + ',' + row];
+                    hm.recalculateTerritory();
+
+                    return {
+                        message: `Тревожный гул под землёй… В шахте [${col}, ${row}] начинается обвал! Каменные плиты обрушиваются на галереи. Шахта разрушена!`,
+                        targetCol: col,
+                        targetRow: row,
+                        choices: [
+                            {
+                                label: 'Укрепить стены (−100 💰, восстановить шахту)',
+                                icon: '🏗️',
+                                apply: function(hm) {
+                                    if (hm.resources.money < 100) {
+                                        return { message: 'Не хватает 100 💰 для укрепления. Шахта остаётся разрушенной.', ok: false };
+                                    }
+                                    hm.resources.money -= 100;
+                                    hm.buildings[col + ',' + row] = snapshot;
+                                    hm.recalculateTerritory();
+                                    return { message: `Инженеры экстренно укрепили стены и расчистили завал. Шахта спасена! Потрачено 100 💰.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Принять потерю',
+                                icon: '💀',
+                                apply: function(hm) {
+                                    return { message: `Шахта [${col}, ${row}] засыпана обломками. Галереи навсегда утеряны.`, ok: true };
+                                }
+                            }
+                        ]
                     };
                 }
             }
 
-            // ── ADD MORE EVENTS HERE ─────────────────────────
-            // Copy the block above, give it a unique id, and push to the array.
+            // ── ДОБАВЛЯЙ НОВЫЕ ИВЕНТЫ ЗДЕСЬ ─────────────
+            // Мировой: { id, name, icon, scope:'world', condition?, apply → { message } }
+            // Локальный (с немедленным эффектом):
+            //   { id, name, icon, scope:'local', condition?,
+            //     apply(hm) → {
+            //       message, targetCol, targetRow,
+            //       choices: [{ label, icon, apply(hm) → { message, ok } }],
+            //       onClose?(hm)
+            //     }
+            //   }
         ]
     };
 })();

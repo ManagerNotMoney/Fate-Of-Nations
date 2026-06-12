@@ -211,9 +211,13 @@
         getBuildingResidents:      function(col, row)   { return E.getBuildingResidents(this, col, row); },
         getPopulationInRadius:     function(col, row, r){ return E.getPopulationInRadius(this, col, row, r); },
         getMarketIncome:           function(col, row)   { return E.getMarketIncome(this, col, row); },
+        hasNearbyMarket:           function(col, row)   { return E.hasNearbyMarket(this, col, row); },
+        getDynamicCost:            function(type)       { return E.getDynamicCost(this, type); },
         isTerrainCompatible:       function(type, tile) { return E.isTerrainCompatible(type, tile); },
         canBuild:                  function(col, row, t){ return E.canBuild(this, col, row, t); },
         queueBuild:                function(col, row, t){ return E.queueBuild(this, col, row, t); },
+        cancelBuild:               function(col, row)   { return E.cancelBuild(this, col, row); },
+        demolishBuilding:          function(col, row)   { return E.demolishBuilding(this, col, row); },
         computeDeltas:             function()           { return E.computeDeltas(this); },
 
         // ════════════════════════════════════════════════════

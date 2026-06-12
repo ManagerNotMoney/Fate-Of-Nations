@@ -306,8 +306,8 @@
             }
             if (building.type === 'mine') {
                 const mode = building.mineMode || 'gold';
-                const modeNames = cfg.mineModeNames || {};
-                const modeProduction = cfg.mineModeProduction || {};
+                const modeNames = bc.mineModeNames || {};
+                const modeProduction = bc.mineModeProduction || {};
                 const prod = modeProduction[mode];
                 if (prod) {
                     const prodStr = Object.entries(prod).map(([r, a]) => `+${a} ${C.RESOURCES[r]?.icon || r}`).join(' ');

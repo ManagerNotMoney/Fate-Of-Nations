@@ -95,6 +95,23 @@
 
         // In-game menu
         document.getElementById('btnMenuInGame').addEventListener('click', backToMenu);
+
+        // Map mode toggle
+        const mapModeToggle = document.getElementById('mapModeToggle');
+        if (mapModeToggle) {
+            mapModeToggle.querySelectorAll('.map-mode-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    mapModeToggle.querySelectorAll('.map-mode-option').forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    const mode = opt.dataset.mode;
+                    if (window.Renderer) window.Renderer.setMapMode(mode);
+                    if (window.UI) {
+                        if (mode === 'work') window.UI.startWorkModeAnim();
+                        else window.UI.stopWorkModeAnim();
+                    }
+                });
+            });
+        }
     }
 
     function openSetupModal() {
@@ -136,7 +153,7 @@
 
     function initGameScreen() {
         // Full cleanup of previous game state
-        UI.cleanup();
+        if (window.UI && window.UI.cleanup) window.UI.cleanup();
         window.GameState.currentTurn = 1;
         window.GameState.selectedCell = null;
         window.GameState.namingCell = null;

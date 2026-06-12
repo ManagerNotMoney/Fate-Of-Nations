@@ -94,7 +94,7 @@
                 turnsToComplete: 2,
                 allowedTiles: ['plain', 'fertile', 'sand'],
                 unique: false,
-                marketRadius: 4,
+                marketRadius: 5,
                 moneyPerResident: 1,
                 description: 'Торговый центр. Приносит 1 монету за каждого жителя и работника в радиусе 4 клеток. Требует минимум 5 жителей в городе.'
             },
@@ -186,8 +186,8 @@
         HOUSE_MAX_POPULATION: 20,
         /** Coins earned per population point per turn (from townhall) */
         MONEY_PER_POPULATION: 1,
-        /** Minimum population required to build a market */
-        MARKET_MIN_POPULATION: 5,
+        /** How far another market must be to NOT cause income penalty */
+        MARKET_COMPETITION_RADIUS: 5,
         /** Max residents in the townhall */
         TOWNHALL_MAX_RESIDENTS: 5
     };

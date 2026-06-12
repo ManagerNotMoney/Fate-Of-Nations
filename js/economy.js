@@ -137,8 +137,8 @@
         },
 
         /**
-         * Counts all residents + workers within a given hex radius
-         * (used by markets to calculate income).
+         * Counts only house residents within a given hex radius
+         * (used by markets to calculate income — workers don't contribute).
          */
         getPopulationInRadius: function(hexMap, col, row, radius) {
             let pop = 0;
@@ -148,28 +148,80 @@
                 if (dist <= radius && dist > 0) {
                     const cfg = C.BUILDINGS[b.type];
                     if (!cfg) continue;
-                    if (cfg.maxResidents) {
+                    // Only count residents in houses (not townhall, not workers)
+                    if (b.type === 'house') {
                         const res = this.getBuildingResidents(hexMap, b.col, b.row);
                         if (res) pop += res.residents;
-                    }
-                    if (cfg.workersRequired && b.type !== 'townhall') {
-                        pop += (b.assignedWorkers || 0);
                     }
                 }
             }
             return pop;
         },
 
+        /**
+         * Returns true if there is another market within MARKET_COMPETITION_RADIUS
+         * of the given market cell.
+         */
+        hasNearbyMarket: function(hexMap, col, row) {
+            const radius = C.MARKET_COMPETITION_RADIUS || 5;
+            for (const key of Object.keys(hexMap.buildings)) {
+                const b = hexMap.buildings[key];
+                if (b.type === 'market' && !(b.col === col && b.row === row)) {
+                    if (hexMap.hexDistance(col, row, b.col, b.row) <= radius) return true;
+                }
+            }
+            return false;
+        },
+
         /** Returns the coin income a market building produces this turn. */
         getMarketIncome: function(hexMap, col, row) {
             const cfg = C.BUILDINGS['market'];
-            const nearbyPop = this.getPopulationInRadius(hexMap, col, row, cfg.marketRadius || 4);
-            return nearbyPop * (cfg.moneyPerResident || 2);
+            const nearbyPop = this.getPopulationInRadius(hexMap, col, row, cfg.marketRadius || 5);
+            let income = nearbyPop * (cfg.moneyPerResident || 1);
+            // Competition penalty: another market within 5 tiles → income ÷ 3
+            if (this.hasNearbyMarket(hexMap, col, row)) {
+                income = Math.floor(income / 3);
+            }
+            return income;
         },
 
         // ════════════════════════════════════════════════════════
-        // TERRAIN COMPATIBILITY
+        // DYNAMIC PRICING
         // ════════════════════════════════════════════════════════
+
+        /**
+         * Returns the actual cost of a building after dynamic pricing.
+         * Base cost + 2% per building already built OR in queue (same type).
+         * local_admin is special: cost = (built_count + 1) * 500, no queue markup.
+         */
+        getDynamicCost: function(hexMap, buildingType) {
+            const cfg = C.BUILDINGS[buildingType];
+            if (!cfg) return {};
+            if (buildingType === 'local_admin') {
+                const builtCount  = Object.values(hexMap.buildings).filter(b => b.type === 'local_admin').length;
+                const queuedCount = hexMap.buildQueue.filter(q => q.type === 'local_admin').length;
+                const base = 500 + queuedCount * 250;
+                const multiplier = 1 + builtCount * 0.02;
+                return { money: Math.ceil(base * multiplier) };
+            }
+
+            const baseCost = cfg.cost || {};
+            if (!Object.keys(baseCost).length) return {};
+
+            // Count same-type buildings already built + in queue
+            const builtSame  = Object.values(hexMap.buildings).filter(b => b.type === buildingType).length;
+            const queuedSame = hexMap.buildQueue.filter(q => q.type === buildingType).length;
+            const totalSame  = builtSame + queuedSame;
+            const multiplier = 1 + totalSame * 0.02;
+
+            const result = {};
+            for (const [res, amt] of Object.entries(baseCost)) {
+                result[res] = Math.ceil(amt * multiplier);
+            }
+            return result;
+        },
+
+
 
         /**
          * Returns true if a building type can be placed on a given tile type.
@@ -236,8 +288,7 @@
 
             // Local admin — dynamic cost + territory
             if (buildingType === 'local_admin') {
-                const adminCount = Object.values(hexMap.buildings).filter(b => b.type === 'local_admin').length;
-                const cost = (adminCount + 1) * 500;
+                const cost = this.getDynamicCost(hexMap, 'local_admin').money || 0;
                 if (hexMap.resources.money < cost) {
                     return { ok: false, reason: `Недостаточно монет: нужно ${cost} 💰` };
                 }
@@ -248,8 +299,9 @@
                 return { ok: false, reason: `Нужно минимум ${C.MARKET_MIN_POPULATION} жителей` };
             }
 
-            // Resource cost check
-            for (const [res, amt] of Object.entries(cfg.cost || {})) {
+            // Dynamic cost check
+            const dynamicCost = this.getDynamicCost(hexMap, buildingType);
+            for (const [res, amt] of Object.entries(dynamicCost)) {
                 if ((hexMap.resources[res] || 0) < amt) {
                     return { ok: false, reason: `Недостаточно ресурсов: нужно ${amt} ${C.RESOURCES[res]?.icon || res}` };
                 }
@@ -267,10 +319,10 @@
             if (!check.ok) return check;
 
             if (buildingType === 'local_admin') {
-                const adminCount = Object.values(hexMap.buildings).filter(b => b.type === 'local_admin').length;
-                hexMap.resources.money -= (adminCount + 1) * 500;
+                hexMap.resources.money -= this.getDynamicCost(hexMap, 'local_admin').money || 0;
             } else {
-                for (const [res, amt] of Object.entries(C.BUILDINGS[buildingType].cost || {})) {
+                const dynamicCost = this.getDynamicCost(hexMap, buildingType);
+                for (const [res, amt] of Object.entries(dynamicCost)) {
                     hexMap.resources[res] = (hexMap.resources[res] || 0) - amt;
                 }
             }
@@ -284,8 +336,65 @@
         },
 
         // ════════════════════════════════════════════════════════
-        // ECONOMY CALCULATIONS
+        // CANCEL & DEMOLISH
         // ════════════════════════════════════════════════════════
+
+        /**
+         * Cancels a building in the queue and refunds the cost.
+         * @returns {{ ok: boolean, reason?: string }}
+         */
+        cancelBuild: function(hexMap, col, row) {
+            const idx = hexMap.buildQueue.findIndex(q => q.col === col && q.row === row);
+            if (idx === -1) return { ok: false, reason: 'Здание не строится' };
+
+            const q = hexMap.buildQueue[idx];
+            hexMap.buildQueue.splice(idx, 1);
+
+            if (q.type === 'townhall') {
+                hexMap.townhallQueued = false;
+            }
+
+            // Refund the cost that was paid at queue time
+            // For local_admin, refund was (built_count_at_queue_time + 1) * 500
+            // We stored no snapshot, so we refund the current dynamic cost
+            // (safe: cancelling returns money based on current queue state)
+            if (q.type === 'local_admin') {
+                const builtCount  = Object.values(hexMap.buildings).filter(b => b.type === 'local_admin').length;
+                // queuedCount после splice уже уменьшился на 1, поэтому считаем без +1
+                const queuedCount = hexMap.buildQueue.filter(q2 => q2.type === 'local_admin').length;
+                const base = 500 + queuedCount * 250;
+                const multiplier = 1 + builtCount * 0.02;
+                hexMap.resources.money += Math.ceil(base * multiplier);
+            } else {
+                // Refund base cost (not dynamic — to avoid edge cases with multi-cancel)
+                const baseCost = C.BUILDINGS[q.type]?.cost || {};
+                for (const [res, amt] of Object.entries(baseCost)) {
+                    hexMap.resources[res] = (hexMap.resources[res] || 0) + amt;
+                }
+            }
+
+            return { ok: true };
+        },
+
+        /**
+         * Demolishes a completed building. No refund. Townhall cannot be demolished.
+         * @returns {{ ok: boolean, reason?: string }}
+         */
+        demolishBuilding: function(hexMap, col, row) {
+            const key = col + ',' + row;
+            const b = hexMap.buildings[key];
+            if (!b) return { ok: false, reason: 'Здание не найдено' };
+            if (b.type === 'townhall') return { ok: false, reason: 'Ратушу нельзя снести' };
+
+            delete hexMap.buildings[key];
+
+            // Recalculate territory (local_admin loss changes territory)
+            hexMap.recalculateTerritory();
+            this.computeDeltas(hexMap);
+            return { ok: true };
+        },
+
+
 
         /**
          * Computes per-turn resource deltas without modifying state.

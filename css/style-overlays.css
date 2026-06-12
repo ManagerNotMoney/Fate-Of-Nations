@@ -281,3 +281,90 @@
     display: flex; gap: 10px; padding: 0 32px;
 }
 .endgame-actions .menu-play-btn { margin-top: 0; }
+
+/* ═══ EVENT MODAL — SCOPE TAG & ACTION BUTTONS (v0.0.3) ══ */
+.event-scope-tag {
+    display: inline-block;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 12px; border-radius: 20px;
+    border: 1px solid;
+    margin-bottom: 10px;
+}
+
+.event-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 32px;
+    margin-top: 4px;
+}
+
+.event-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px 18px;
+    border-radius: var(--radius-xs);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all var(--transition);
+    outline: none;
+}
+
+/* Кнопка «Перейти» */
+.event-action-btn.event-btn--goto {
+    background: rgba(79,142,247,0.08);
+    border-color: rgba(79,142,247,0.30);
+    color: var(--accent);
+}
+.event-action-btn.event-btn--goto:hover {
+    background: rgba(79,142,247,0.16);
+    border-color: rgba(79,142,247,0.55);
+    transform: translateY(-1px);
+}
+
+/* Кнопки выбора */
+.event-action-btn.event-btn--choice {
+    background: var(--surface);
+    border-color: var(--border-hi);
+    color: var(--text);
+}
+.event-action-btn.event-btn--choice:hover {
+    background: var(--surface2);
+    border-color: rgba(255,255,255,0.22);
+    transform: translateY(-1px);
+}
+
+/* Кнопка «Принять» (мировые события) */
+.event-action-btn.event-btn--accept {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(79,142,247,0.30);
+}
+.event-action-btn.event-btn--accept:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(79,142,247,0.45);
+}
+
+/* ── Баланс ресурсов внутри ивент-модала (v0.0.3) ── */
+.event-balance-strip {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 7px 14px;
+    margin-bottom: 2px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+}
+.event-balance-strip b {
+    color: var(--text);
+    font-weight: 600;
+}
