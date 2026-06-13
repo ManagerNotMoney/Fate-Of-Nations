@@ -61,14 +61,25 @@
                     let html = '';
                     if (building) {
                         const bc = C.BUILDINGS[building.type];
+                        const level = building.level || 1;
+                        const levelBadge = level > 1 ? ` <span class="building-level-badge">⭐ Уровень ${level}</span>` : '';
                         html += `<div class="building-card">
                             <div class="building-card-icon">${bc.icon}</div>
                             <div class="building-card-info">
-                                <div class="building-card-name">${bc.name}${building.name ? ' «' + building.name + '»' : ''}</div>
+                                <div class="building-card-name">${bc.name}${building.name ? ' «' + building.name + '»' : ''}${levelBadge}</div>
                                 <div class="building-card-desc">${bc.description}</div>
                                 ${this._renderBuildingStats(bc, building)}
                             </div>
                         </div>`;
+                        html += this._renderCrisisTab(building);
+                        if (bc.maxLevel && bc.maxLevel > 1) {
+                            const canUpgrade = (building.level || 1) < bc.maxLevel;
+                            const uc = bc.upgradeCost || {};
+                            const costStr = Object.entries(uc).map(([r, a]) => `${C.RESOURCES[r]?.icon || r}${a}`).join(' ');
+                            html += `<button class="upgrade-btn${canUpgrade ? '' : ' upgrade-btn--disabled'}" data-action="upgrade" ${canUpgrade ? '' : 'disabled'}>
+                                ⭐ Улучшить до уровня ${(building.level || 1) + 1} (${costStr})
+                            </button>`;
+                        }
                         if (bc.maxResidents) {
                             html += this._renderResidentsTab(bc, building);
                         }
@@ -80,6 +91,9 @@
                         }
                         if (building.type === 'mine') {
                             html += this._renderMineTab(building);
+                        }
+                        if (building.type === 'local_admin' && (building.assignedWorkers || 0) >= 1) {
+                            html += this._renderDistrictTab(building);
                         }
                         // Demolish button (not for townhall)
                         if (building.type !== 'townhall') {
@@ -105,6 +119,7 @@
                     this._bindWorkerButtons(col, row);
                     this._bindMineModeButtons(col, row);
                     this._bindCancelDemolishButtons(col, row);
+                    this._bindCrisisButtons(col, row);
                 } else {
                     this.catBuildings.style.display = 'none';
                     this.buildingsList.innerHTML = '';
@@ -155,11 +170,73 @@
             </div>`;
         },
 
+        // ─── District Tab (local_admin / townhall) ────────────
+        _renderDistrictTab: function(building) {
+            const stats = E.getDistrictStats(HM, building.col, building.row);
+            const ideo  = E.getDistrictIdeology(HM, building.col, building.row);
+            const { residents, workInside, workOutside, unemployed, commutersIn, workingHere } = stats;
+
+            // ── Ideology section ──────────────────────────────
+            let ideoHtml = '';
+            if (ideo && ideo.total > 0) {
+                const rows = Object.entries(ideo.IDEO_META).map(([key, meta]) => {
+                    const n = ideo[key] || 0;
+                    if (n <= 0) return '';
+                    const pct = Math.round((n / ideo.total) * 100);
+                    const isDominant = key === ideo.dominant;
+                    return `<div class="district-ideo-row${isDominant ? ' dominant' : ''}">
+                        <span class="district-ideo-icon">${meta.icon}</span>
+                        <span class="district-ideo-label" style="color:${meta.color}">${meta.label}</span>
+                        <div class="district-ideo-bar-wrap">
+                            <div class="district-ideo-bar" style="width:${pct}%;background:${meta.color};opacity:0.75;"></div>
+                        </div>
+                        <span class="district-ideo-pct" style="color:${meta.color}">${n}&nbsp;(${pct}%)</span>
+                        ${isDominant ? '<span class="district-ideo-crown">★</span>' : ''}
+                    </div>`;
+                }).join('');
+
+                const dm = ideo.dominantMeta;
+                const dominantBadge = dm
+                    ? `<div class="district-dominant-badge" style="border-color:${dm.color}40;background:${dm.color}12;color:${dm.color}">
+                           ${dm.icon} Доминирует: <b>${dm.label}</b>
+                       </div>`
+                    : '';
+
+                ideoHtml = `<div class="district-ideo-section">
+                    <div class="district-ideo-title">⚑ Политические фракции района</div>
+                    ${dominantBadge}
+                    <div class="district-ideo-list">${rows}</div>
+                </div>`;
+            }
+
+            return `<div class="info-tab district-tab">
+                <div class="info-tab-header">
+                    <span class="info-tab-icon">🏙️</span>
+                    <span class="info-tab-title">Район (радиус 7)</span>
+                    <span class="info-tab-badge" style="color:#4ade80">${residents} 👥</span>
+                </div>
+                <div class="info-tab-body">
+                    <div class="residents-detail">
+                        <span class="res-detail-item">🏠 Живёт в районе: <b>${residents}</b></span>
+                        <span class="res-detail-item">🛠️ Работает в районе: <b>${workingHere}</b></span>
+                        <span class="res-detail-item">🚶 Приезжают из других районов: <b>${commutersIn}</b></span>
+                        <span class="res-detail-item">🌍 Уезжают работать за пределы: <b>${workOutside}</b></span>
+                        ${unemployed > 0 ? `<span class="res-detail-item" style="color:#f87171">😴 Без работы: <b>${unemployed}</b></span>` : ''}
+                    </div>
+                    ${ideoHtml}
+                </div>
+            </div>`;
+        },
+
         // ─── Workers Tab ──────────────────────────────────────
         _renderWorkersTab: function(bc, building) {
             const assigned = building.assignedWorkers || 0;
             const required = bc.workersRequired;
-            const maxWorkers = bc.workersMax || bc.workersRequired;
+            const level = building.level || 1;
+            let maxWorkers = bc.workersMax || bc.workersRequired;
+            if (bc.levelWorkersMax && bc.levelWorkersMax[level] !== undefined) {
+                maxWorkers = bc.levelWorkersMax[level];
+            }
             const free = E.getFreeWorkers(HM);
 
             // Check for strike
@@ -219,7 +296,93 @@
             </div>`;
         },
 
-        // ─── Market Tab ───────────────────────────────────────
+        // ─── Crisis Tab (саранча / забастовка) ────────────────
+        _renderCrisisTab: function(building) {
+            const EV = window.EventsEngine;
+            if (!EV) return '';
+
+            // ── Саранча на ферме ──
+            if (building.type === 'farm') {
+                const locust = EV.getActiveLocust();
+                if (locust && locust.affectedFarms.some(f => f.col === building.col && f.row === building.row)) {
+                    return `<div class="info-tab crisis-tab crisis-tab--locust">
+                        <div class="info-tab-header">
+                            <span class="info-tab-icon">🦗</span>
+                            <span class="info-tab-title">Нашествие саранчи</span>
+                            <span class="info-tab-badge badge-strike">⏳ ${locust.turnsLeft} ход.</span>
+                        </div>
+                        <div class="info-tab-body">
+                            <div class="crisis-desc">Поле кишит саранчой — урожай пшеницы с этой фермы уничтожается.</div>
+                            <button class="crisis-btn crisis-btn--disinfect" data-crisis="disinfect">
+                                <span class="crisis-btn-icon">🧪</span>
+                                <span class="crisis-btn-label">Дезинфицировать поле</span>
+                                <span class="crisis-btn-cost">−15 💰</span>
+                            </button>
+                        </div>
+                    </div>`;
+                }
+            }
+
+            // ── Забастовка на здании ──
+            const strike = EV.getActiveStrike();
+            if (strike && strike.targetCol === building.col && strike.targetRow === building.row) {
+                return `<div class="info-tab crisis-tab crisis-tab--strike">
+                    <div class="info-tab-header">
+                        <span class="info-tab-icon">✊</span>
+                        <span class="info-tab-title">Забастовка рабочих</span>
+                        <span class="info-tab-badge badge-strike">⏳ ${strike.turnsLeft} ход.</span>
+                    </div>
+                    <div class="info-tab-body">
+                        <div class="crisis-desc">Рабочие отказываются выходить на смену — здание простаивает.</div>
+                        <div class="crisis-btn-row">
+                            <button class="crisis-btn crisis-btn--bonus" data-crisis="strike-bonus">
+                                <span class="crisis-btn-icon">💸</span>
+                                <span class="crisis-btn-label">Выдать премии</span>
+                                <span class="crisis-btn-cost">−300 💰</span>
+                            </button>
+                            <button class="crisis-btn crisis-btn--suppress" data-crisis="strike-suppress">
+                                <span class="crisis-btn-icon">⚔️</span>
+                                <span class="crisis-btn-label">Подавить</span>
+                                <span class="crisis-btn-cost">−100 🛡️</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            return '';
+        },
+
+        _bindCrisisButtons: function(col, row) {
+            const EV = window.EventsEngine;
+            if (!EV) return;
+
+            this.buildingsList.querySelectorAll('[data-crisis]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const action = btn.dataset.crisis;
+                    let result;
+                    if (action === 'disinfect') {
+                        result = EV.disinfectFarm(HM, col, row);
+                    } else if (action === 'strike-bonus') {
+                        result = EV.resolveStrikeAction(HM, col, row, 'bonus');
+                    } else if (action === 'strike-suppress') {
+                        result = EV.resolveStrikeAction(HM, col, row, 'suppress');
+                    }
+                    if (!result) return;
+
+                    if (window.UI) {
+                        window.UI.showNotification((result.ok ? '✅ ' : '⚠️ ') + result.message, result.ok ? 3500 : 2500);
+                        window.UI.updateResourceBar();
+                    }
+                    if (result.ok) {
+                        this.openPanel(col, row);
+                        window.Renderer.render();
+                    }
+                });
+            });
+        },
+
+
         _renderMineTab: function(building) {
             const cfg = C.BUILDINGS['mine'];
             const mode = building.mineMode || 'gold';
@@ -345,6 +508,23 @@
                     }
                 });
             }
+
+            const upgradeBtn = this.buildingsList.querySelector('.upgrade-btn');
+            if (upgradeBtn) {
+                upgradeBtn.addEventListener('click', () => {
+                    const result = E.upgradeBuilding(HM, col, row);
+                    if (result.ok) {
+                        const b = HM.buildings[col + ',' + row];
+                        const bc = C.BUILDINGS[b.type];
+                        if (window.UI) window.UI.showNotification(`⭐ ${bc.name} улучшен до уровня ${b.level}!`);
+                        if (window.UI) window.UI.updateResourceBar();
+                        this.openPanel(col, row);
+                        window.Renderer.render();
+                    } else {
+                        if (window.UI) window.UI.showNotification('⚠️ ' + result.reason, 2500);
+                    }
+                });
+            }
         },
 
         _bindWorkerButtons: function(col, row) {
@@ -380,6 +560,7 @@
 
         _renderBuildingStats: function(bc, building) {
             const parts = [];
+            const level = building.level || 1;
 
             // Check for strike
             if (window.EventsEngine) {
@@ -392,6 +573,19 @@
                 if (building.type === 'market') {
                     const income = E.getMarketIncome(HM, building.col, building.row);
                     parts.push(`<span class="bstat prod">💰 +${income} монет/ход</span>`);
+                } else if (building.type === 'mill') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const wheatNeeded = Math.round(2 * (level === 2 ? 1.5 : 1));
+                    const breadProduced = Math.round(2 * (level === 2 ? 1.5 : 1));
+                    parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🍞 +${breadProduced} хлеба/ход</span>`);
+                    parts.push(`<span class="bstat cons">🌾 -${wheatNeeded} пшеницы/ход</span>`);
+                } else if (building.type === 'farm') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const workers = building.assignedWorkers || 0;
+                    const baseWheat = bc.production.wheat || 3;
+                    const perWorker = baseWheat * (level === 2 ? 1.5 : 1);
+                    const total = Math.round(perWorker * workers * 10) / 10;
+                    parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🌾 +${total} пшеницы/ход (${workers} раб.)</span>`);
                 } else {
                     for (const [res, amt] of Object.entries(bc.production)) {
                         if (amt <= 0) continue;
@@ -403,7 +597,7 @@
                     }
                 }
             }
-            if (bc.consumption) {
+            if (bc.consumption && building.type !== 'mill') {
                 for (const [res, amt] of Object.entries(bc.consumption)) {
                     const rc = C.RESOURCES[res];
                     if (rc) parts.push(`<span class="bstat cons">${rc.icon} -${amt} ${rc.name}/ход</span>`);
@@ -494,6 +688,10 @@
             const result = E.queueBuild(HM, col, row, type);
             if (result.ok) {
                 const bc = C.BUILDINGS[type];
+                // Track last built type for stamp mode
+                window.GameState.lastBuildType = type;
+                if (window._updateStampHint) window._updateStampHint();
+
                 if (window.UI) window.UI.showNotification(bc.icon + ' ' + bc.name + ' поставлена в очередь строительства');
                 if (window.UI) window.UI.updateResourceBar();
                 this.openPanel(col, row);

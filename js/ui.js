@@ -6,14 +6,8 @@
     const CLAUDE_QUIPS = [
         '🤖 Клод доволен архитектурой вашего города!',
         '📊 Статистика говорит: вы справляетесь лучше среднего',
-        '🏗️ Архитектурное решение засчитано',
-        '💡 Интересный ход. Буду наблюдать.',
-        '🌍 Цивилизация растёт. Клод доволен.',
-        '🍎 Яблоки — мудрый выбор. Сад порадует жителей!',
-        '⚔️ Казармы? Готовитесь к худшему, надеетесь на лучшее.',
-        '⛏️ Шахты в горах — отличная инвестиция!',
-        '⚓ Порт открывает новые горизонты!',
-        '🏢 Администрация расширяет влияние.'
+        '🏗️ Стройка идёт по плану.',
+        '🌍 Город растёт. Клод доволен.'
     ];
     let _quipIdx = 0;
 
@@ -76,8 +70,7 @@
             set('resMoney',      res.money,                              del.money);
             set('resFood',       res.bread + res.apples + res.fish,      del.bread + del.apples + del.fish);
             set('resRaw',        res.wheat,                              del.wheat);
-            set('resIron',       res.iron,                               del.iron);
-            set('resCopper',     res.copper,                             del.copper);
+            set('resResources',  res.iron + res.copper + res.wood,       del.iron + del.copper + del.wood);
             set('resPopulation', res.population,                         del.population);
             set('resDefense',    res.defense,                            del.defense);
 
@@ -100,6 +93,27 @@
 
             const completed = HM.processTurn();
 
+            // ── Auto-work: assign workers to newly completed buildings ──
+            if (window.GameState.autoWork && completed.length > 0) {
+                const E = window.EconomyEngine;
+                let autoAssigned = 0;
+                for (const q of completed) {
+                    const bc = window.GameConfig.BUILDINGS[q.type];
+                    if (!bc || !bc.workersRequired) continue;
+                    const maxW = bc.workersMax || bc.workersRequired;
+                    let added = 0;
+                    while (added < maxW) {
+                        const r = E.assignWorker(HM, q.col, q.row);
+                        if (!r.ok) break;
+                        added++;
+                        autoAssigned++;
+                    }
+                }
+                if (autoAssigned > 0) {
+                    setTimeout(() => this.showNotification(`👷 Авто-работа: назначено ${autoAssigned} рабочих на новые здания`, 3000), 600);
+                }
+            }
+
             // ── World event notifications ───────────────────
             if (HM.pendingEventResults && HM.pendingEventResults.length > 0) {
                 const ev = HM.pendingEventResults[0];
@@ -113,6 +127,12 @@
             } else if (HM.deltas.population < 0) {
                 this.showNotification('⚠️ Населению не хватает еды!', 3000);
             }
+
+            const emigration = HM.lastEvents?.find(e => e.type === 'emigration');
+            if (emigration) {
+                this.showNotification(`🚶 ${emigration.count} житель${emigration.count === 1 ? '' : (emigration.count < 5 ? 'я' : 'ей')} покинул${emigration.count === 1 ? '' : 'и'} город — не хватает жилья! Стройте дома.`, 4500);
+            }
+
 
             // Completion events
             const townhallDone    = completed.find(q => q.type === 'townhall');
@@ -144,8 +164,8 @@
             // Milestone quips
             const t = window.GameState.currentTurn;
             if (t === 5)  setTimeout(() => this.showNotification('🤖 Клод: «Неплохое начало для 5 ходов»'), 3500);
-            if (t === 10) setTimeout(() => this.showNotification('📈 Клод: «Смотрю данные. Впечатляет!»'), 3500);
-            if (t === 20) setTimeout(() => this.showNotification('🏆 Клод: «20 ходов! Я бы так не смог»'), 3500);
+            if (t === 10) setTimeout(() => this.showNotification('📈 Клод: «Город развивается стабильно»'), 3500);
+            if (t === 20) setTimeout(() => this.showNotification('🏆 Клод: «20 ходов! Внушительный прогресс»'), 3500);
 
             // ── Win / Lose check ───────────────────────────────
             if (HM.gameOver === 'win') {
@@ -166,7 +186,11 @@
         startConstructionAnim: function() {
             if (this._animFrame) return;
             const loop = () => {
-                if (HM.buildQueue.length === 0) { this._animFrame = null; return; }
+                if (HM.buildQueue.length === 0) {
+                    cancelAnimationFrame(this._animFrame);
+                    this._animFrame = null;
+                    return;
+                }
                 window.Renderer.render();
                 this._animFrame = requestAnimationFrame(loop);
             };

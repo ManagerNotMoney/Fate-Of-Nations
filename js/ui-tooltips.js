@@ -13,6 +13,7 @@
             this._bindChipTooltip('resMoneyChip');
             this._bindChipTooltip('resFoodChip');
             this._bindChipTooltip('resRawChip');
+            this._bindChipTooltip('resResourcesChip');
             this._bindChipTooltip(this._popChipEl());
             this._bindCanvasTooltip();
         },
@@ -73,6 +74,7 @@
             this._updateMoneyTooltip();
             this._updateFoodTooltip();
             this._updateRawTooltip();
+            this._updateResourcesTooltip();
             this._updatePopTooltip();
         },
 
@@ -152,10 +154,39 @@
             this._setChipTooltip(chip, lines.join('\n'));
         },
 
+        _updateResourcesTooltip: function() {
+            const chip = document.getElementById('resResourcesChip');
+            if (!chip) return;
+            const res = HM.resources, del = HM.deltas;
+            const warehouseCount = Object.values(HM.buildings).filter(b => b.type === 'warehouse').length;
+            const maxStorage = 150 + warehouseCount * 150;
+
+            const fmt = (v, d, icon, name, color) => {
+                const n = Math.floor(v);
+                const delta = d ? (d > 0 ? ` (+${Math.round(d)})` : ` (${Math.round(d)})`) : '';
+                const pct = Math.round((n / maxStorage) * 100);
+                const bar = '█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10));
+                return `<span style="color:var(--muted)">${icon} ${name}</span> <span style="color:${color}">${n}${delta}</span> <span style="color:var(--muted);font-size:9px;">${bar} ${pct}%</span>`;
+            };
+
+            const lines = [
+                '<b style="color:#94a3b8">📦 Ресурсы:</b>',
+                fmt(res.iron,   del.iron,   '⛓️', 'Железо',  '#94a3b8'),
+                fmt(res.copper, del.copper, '🔶', 'Медь',    '#b45309'),
+                fmt(res.coal,   del.coal,   '⚫', 'Уголь',   '#374151'),
+                fmt(res.steel,  del.steel,  '🔩', 'Сталь',   '#9ca3af'),
+                fmt(res.wood,   del.wood,   '🪵', 'Дерево',  '#a16207'),
+                '',
+                `<span style="color:var(--muted);font-size:11px;">📦 Складов: ${warehouseCount} · Лимит: ${maxStorage}</span>`,
+            ];
+            this._setChipTooltip(chip, lines.join('\n'));
+        },
+
         _getIdeologies: function() {
             const IDEOLOGY_MAP = {
                 farm:        'conservative',
                 mill:        'conservative',
+                sawmill:     'conservative',
                 mine:        'communist',
                 factory:     'communist',
                 orchard:     'liberal',
@@ -185,9 +216,9 @@
             const ideo = this._getIdeologies();
 
             const IDEO_META = {
-                conservative: { icon: '🌾', label: 'Консерваторы',  color: '#86efac', hint: 'Фермы и мельницы' },
-                communist:    { icon: '⚒️',  label: 'Коммунисты',    color: '#f87171', hint: 'Заводы и шахты'  },
-                liberal:      { icon: '🍎', label: 'Либералы',       color: '#fbbf24', hint: 'Яблони,рыбаки'  },
+                conservative: { icon: '🌾', label: 'Консерваторы',  color: '#86efac', hint: 'Фермы, мельницы, лесопилки' },
+                communist:    { icon: '⚒️',  label: 'Коммунисты',    color: '#f87171', hint: 'Шахты и заводы'  },
+                liberal:      { icon: '🍎', label: 'Либералы',       color: '#fbbf24', hint: 'Сады и порты' },
                 militarist:   { icon: '⚔️', label: 'Кратократы',    color: '#a78bfa', hint: 'Ратуша, администрации, казармы' },
                 anarchist:    { icon: '🔥', label: 'Анархисты',      color: '#94a3b8', hint: 'Безработные жители' },
             };
@@ -271,11 +302,34 @@
 
                 if (bc.workersRequired) {
                     const assigned = building.assignedWorkers || 0;
+                    const level = building.level || 1;
+                    let maxWorkers = bc.workersMax || bc.workersRequired;
+                    if (bc.levelWorkersMax && bc.levelWorkersMax[level] !== undefined) {
+                        maxWorkers = bc.levelWorkersMax[level];
+                    }
                     const active = assigned >= bc.workersRequired;
-                    html += `<br><span style="color:${active ? '#4ade80' : '#f87171'};font-size:11px;">👷 ${assigned}/${bc.workersRequired} рабочих</span>`;
+                    html += `<br><span style="color:${active ? '#4ade80' : '#f87171'};font-size:11px;">👷 ${assigned}/${maxWorkers} рабочих</span>`;
                 }
 
                 html += this._buildingProductionLine(building, bc);
+
+                // District ideology summary for local_admin
+                if (building.type === 'local_admin' && (building.assignedWorkers || 0) >= 1) {
+                    const ideo = E.getDistrictIdeology(HM, building.col, building.row);
+                    if (ideo && ideo.dominantMeta) {
+                        const dm = ideo.dominantMeta;
+                        html += `<br><span style="color:${dm.color};font-size:11px;">${dm.icon} Фракция района: <b>${dm.label}</b></span>`;
+                        html += `<br><span style="color:var(--muted);font-size:10px;">`;
+                        let parts = [];
+                        for (const [key, meta] of Object.entries(ideo.IDEO_META)) {
+                            const n = ideo[key] || 0;
+                            if (n <= 0) continue;
+                            const pct = ideo.total > 0 ? Math.round((n / ideo.total) * 100) : 0;
+                            parts.push(`<span style="color:${meta.color}">${meta.icon}${pct}%</span>`);
+                        }
+                        html += parts.join(' · ') + '</span>';
+                    }
+                }
 
             } else if (inQueue) {
                 const bc = C.BUILDINGS[inQueue.type];
@@ -310,10 +364,28 @@
                 const modeProduction = bc.mineModeProduction || {};
                 const prod = modeProduction[mode];
                 if (prod) {
-                    const prodStr = Object.entries(prod).map(([r, a]) => `+${a} ${C.RESOURCES[r]?.icon || r}`).join(' ');
+                    const level = building.level || 1;
+                    const assigned = building.assignedWorkers || 0;
+                    const extraWorkers = level === 2 ? Math.max(0, assigned - bc.workersRequired) : 0;
+                    const factor = 1 + extraWorkers * 0.25;
+                    const prodStr = Object.entries(prod).map(([r, a]) => `+${Math.round(a * factor * 10) / 10} ${C.RESOURCES[r]?.icon || r}`).join(' ');
                     return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">${modeNames[mode] || mode}: ${prodStr}/ход${suffix}</span>` + strikeInfo;
                 }
                 return strikeInfo;
+            }
+            if (building.type === 'mill') {
+                const level = building.level || 1;
+                const wheatNeeded = Math.round(2 * (level === 2 ? 1.5 : 1));
+                const breadProduced = Math.round(2 * (level === 2 ? 1.5 : 1));
+                return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">🍞 +${breadProduced} хлеба/ход (🌾 -${wheatNeeded})${suffix}</span>` + strikeInfo;
+            }
+            if (building.type === 'farm') {
+                const level = building.level || 1;
+                const workers = building.assignedWorkers || 0;
+                const baseWheat = bc.production.wheat || 3;
+                const perWorker = baseWheat * (level === 2 ? 1.5 : 1);
+                const total = Math.round(perWorker * workers * 10) / 10;
+                return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">🌾 +${total} пшеницы/ход (${workers} раб.)${suffix}</span>` + strikeInfo;
             }
             if (building.type === 'port') {
                 const assigned = building.assignedWorkers || 0;

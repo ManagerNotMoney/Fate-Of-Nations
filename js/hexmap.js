@@ -16,6 +16,8 @@
         townhallQueued: false,
         territory: {},
         factionColor: '#4f8ef7',
+        citizens: [],
+        _nextCitizenId: 1,
 
         // ─── Resources ───────────────────────────────────────
         resources: {
@@ -87,7 +89,7 @@
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {
                     const dist = this.hexDistance(col, row, c, r);
-                    if (dist <= radius && dist > 0) {
+                    if (dist <= radius) {
                         const key = c + ',' + r;
                         const existing = this.territory[key];
                         if (!existing || dist < existing.distance) {
@@ -124,18 +126,8 @@
          * used to show district labels in tooltips.
          */
         getDistrictName: function(col, row) {
-            let closestDist = Infinity, closestName = null;
-            for (const key of Object.keys(this.buildings)) {
-                const b = this.buildings[key];
-                if (b.type === 'local_admin' && (b.assignedWorkers || 0) >= 1 && b.name) {
-                    const dist = this.hexDistance(col, row, b.col, b.row);
-                    if (dist <= 7 && dist < closestDist) {
-                        closestDist = dist;
-                        closestName = b.name;
-                    }
-                }
-            }
-            return closestName;
+            const owner = E.getDistrictOwner(this, col, row);
+            return (owner && owner.name) ? owner.name : null;
         },
 
         /**
@@ -209,6 +201,7 @@
         isBuildingActive:          function(col, row)   { return E.isBuildingActive(this, col, row); },
         getBuildingWorkerStatus:   function(col, row)   { return E.getBuildingWorkerStatus(this, col, row); },
         getBuildingResidents:      function(col, row)   { return E.getBuildingResidents(this, col, row); },
+        getDistrictStats:          function(col, row)   { return E.getDistrictStats(this, col, row); },
         getPopulationInRadius:     function(col, row, r){ return E.getPopulationInRadius(this, col, row, r); },
         getMarketIncome:           function(col, row)   { return E.getMarketIncome(this, col, row); },
         hasNearbyMarket:           function(col, row)   { return E.hasNearbyMarket(this, col, row); },
@@ -218,6 +211,7 @@
         queueBuild:                function(col, row, t){ return E.queueBuild(this, col, row, t); },
         cancelBuild:               function(col, row)   { return E.cancelBuild(this, col, row); },
         demolishBuilding:          function(col, row)   { return E.demolishBuilding(this, col, row); },
+        upgradeBuilding:           function(col, row)   { return E.upgradeBuilding(this, col, row); },
         computeDeltas:             function()           { return E.computeDeltas(this); },
 
         // ════════════════════════════════════════════════════
@@ -235,8 +229,10 @@
             this.townHallBuilt = false;
             this.townhallQueued = false;
             this.territory = {};
-            this.resources = { money: 50, wheat: 0, bread: 8, apples: 0, fish: 0, iron: 0, copper: 0, population: 3, defense: 0 };
-            this.deltas = { money: 0, wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0, population: 0, defense: 0 };
+            this.citizens = [];
+            this._nextCitizenId = 1;
+            this.resources = { money: 50, wheat: 0, bread: 8, apples: 0, fish: 0, iron: 0, copper: 0, coal: 0, steel: 0, wood: 0, population: 3, defense: 0 };
+            this.deltas = { money: 0, wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0, coal: 0, steel: 0, wood: 0, population: 0, defense: 0 };
             this.lastEvents = [];
             this.pendingEventResults = [];
             this.winStreakTurns = 0;

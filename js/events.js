@@ -100,6 +100,66 @@
         },
 
         /**
+         * Дезинфекция ОДНОЙ фермы из панели здания.
+         * Стоимость: 15 💰 за ферму. Убирает ферму из списка заражённых.
+         * Если заражённых ферм больше не осталось — снимает эффект саранчи целиком.
+         */
+        disinfectFarm: function(hexMap, col, row) {
+            const locust = this.getActiveLocust();
+            if (!locust) return { ok: false, message: 'На этой ферме нет саранчи.' };
+
+            const idx = locust.affectedFarms.findIndex(f => f.col === col && f.row === row);
+            if (idx === -1) return { ok: false, message: 'Эта ферма не заражена.' };
+
+            const cost = 15;
+            if (hexMap.resources.money < cost) {
+                return { ok: false, message: `Не хватает ${cost} 💰 для дезинфекции.` };
+            }
+
+            hexMap.resources.money -= cost;
+            locust.affectedFarms.splice(idx, 1);
+
+            if (locust.affectedFarms.length === 0) {
+                this._activeEffects = this._activeEffects.filter(e => e.type !== 'locust');
+                return { ok: true, message: `Поле обработано (−${cost} 💰). Саранча полностью отступила!` };
+            }
+            return { ok: true, message: `Поле обработано (−${cost} 💰). Осталось заражённых полей: ${locust.affectedFarms.length}.` };
+        },
+
+        /**
+         * Разрешение забастовки прямо из панели здания.
+         * action: 'bonus' (−300 💰) или 'suppress' (−100 🛡️)
+         */
+        resolveStrikeAction: function(hexMap, col, row, action) {
+            const strike = this.getActiveStrike();
+            if (!strike || strike.targetCol !== col || strike.targetRow !== row) {
+                return { ok: false, message: 'На этом здании нет забастовки.' };
+            }
+
+            if (action === 'bonus') {
+                const cost = 300;
+                if (hexMap.resources.money < cost) {
+                    return { ok: false, message: `Не хватает ${cost} 💰 на премии.` };
+                }
+                hexMap.resources.money -= cost;
+                this._activeEffects = this._activeEffects.filter(e => !(e.type === 'strike' && e.targetCol === col && e.targetRow === row));
+                return { ok: true, message: `Премии выплачены (−${cost} 💰). Рабочие вернулись к работе!` };
+            }
+
+            if (action === 'suppress') {
+                const cost = 100;
+                if (hexMap.resources.defense < cost) {
+                    return { ok: false, message: `Не хватает ${cost} 🛡️ для подавления.` };
+                }
+                hexMap.resources.defense -= cost;
+                this._activeEffects = this._activeEffects.filter(e => !(e.type === 'strike' && e.targetCol === col && e.targetRow === row));
+                return { ok: true, message: `Забастовка подавлена силой (−${cost} 🛡️).` };
+            }
+
+            return { ok: false, message: 'Неизвестное действие.' };
+        },
+
+        /**
          * Resolve a player choice for a local event.
          * @param {object} hexMap
          * @param {object} pendingEvent  — LocalEventResult stored by UI
@@ -182,32 +242,38 @@
             // ── 4. ХОРОШИЙ УРОЖАЙ ────────────────────────
             {
                 id: 'good_harvest', name: 'Хороший урожай', icon: '🌻', scope: 'world',
-                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'farm'); },
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'farm' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
+                },
                 apply: function(hm) {
-                    const farms = Object.values(hm.buildings).filter(b => b.type === 'farm');
+                    const farms = Object.values(hm.buildings).filter(b => b.type === 'farm' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
                     const bonus = farms.length * 5;
                     hm.resources.wheat += bonus;
-                    return { message: `Каждая из ${farms.length} ферм дала щедрый урожай. Итого: +${bonus} 🌾`, duration: 4500 };
+                    return { message: `Каждая из ${farms.length} работающих ферм дала щедрый урожай. Итого: +${bonus} 🌾`, duration: 4500 };
                 }
             },
 
             // ── 5. МОРСКАЯ УДАЧА ─────────────────────────
             {
                 id: 'sea_fortune', name: 'Морская удача', icon: '⚓', scope: 'world',
-                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'port'); },
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'port' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
+                },
                 apply: function(hm) {
-                    const ports = Object.values(hm.buildings).filter(b => b.type === 'port');
+                    const ports = Object.values(hm.buildings).filter(b => b.type === 'port' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
                     const pct   = 0.15 + Math.random() * 0.05;
                     const bonus = Math.floor(hm.resources.money * pct);
                     hm.resources.money += bonus;
-                    return { message: `${ports.length} порт(а) поймали удачный ветер — дополнительно ${bonus} 💰 (+${Math.round(pct * 100)}%).`, duration: 5000 };
+                    return { message: `${ports.length} работающий(е) порт(а) поймали удачный ветер — дополнительно ${bonus} 💰 (+${Math.round(pct * 100)}%).`, duration: 5000 };
                 }
             },
 
             // ── 6. АЛМАЗЫ ────────────────────────────────
             {
                 id: 'diamonds', name: 'Алмазы!', icon: '💎', scope: 'world',
-                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'mine'); },
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'mine' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
+                },
                 apply: function(hm) {
                     const pct   = 0.05 + Math.random() * 0.05;
                     const bonus = Math.floor(hm.resources.money * pct);
@@ -219,13 +285,15 @@
             // ── 7. БОЛЬШЕ ЯБЛОК ──────────────────────────
             {
                 id: 'more_apples', name: 'Больше яблок!', icon: '🍎', scope: 'world',
-                condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'orchard'); },
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'orchard' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
+                },
                 apply: function(hm) {
-                    const orchards = Object.values(hm.buildings).filter(b => b.type === 'orchard');
+                    const orchards = Object.values(hm.buildings).filter(b => b.type === 'orchard' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
                     const bonusPer = 3 + Math.floor(Math.random() * 3);
                     const total    = orchards.length * bonusPer;
                     hm.resources.apples += total;
-                    return { message: `Каждый сад дал +${bonusPer} яблок. Итого: +${total} 🍎`, duration: 4500 };
+                    return { message: `Каждый работающий сад дал +${bonusPer} яблок. Итого: +${total} 🍎`, duration: 4500 };
                 }
             },
 
@@ -541,6 +609,67 @@
                                 icon: '💀',
                                 apply: function(hm) {
                                     return { message: `Шахта [${col}, ${row}] засыпана обломками. Галереи навсегда утеряны.`, ok: true };
+                                }
+                            }
+                        ]
+                    };
+                }
+            },
+
+            // ── 14. ДОЛОЙ БУРЖУАЗИЮ! ───────────────────────
+            {
+                id: 'down_with_bourgeoisie', name: 'Долой буржуазию!', icon: '🚩', scope: 'local',
+                condition: function(hm) {
+                    const communistBuildings = Object.values(hm.buildings)
+                        .filter(b => (b.type === 'mine' || b.type === 'factory') && (b.assignedWorkers || 0) > 0);
+                    const communistCount = communistBuildings.reduce((s, b) => s + (b.assignedWorkers || 0), 0);
+                    if (communistCount === 0) return false;
+                    if (communistCount < hm.resources.population * 0.5) return false;
+
+                    const income = (hm.deltas && hm.deltas.money) || 0;
+                    if (income <= 0) return false;
+                    return hm.resources.money >= income * 60;
+                },
+                apply: function(hm) {
+                    const communistBuildings = Object.values(hm.buildings)
+                        .filter(b => (b.type === 'mine' || b.type === 'factory') && (b.assignedWorkers || 0) > 0);
+                    const communistCount = communistBuildings.reduce((s, b) => s + (b.assignedWorkers || 0), 0);
+
+                    return {
+                        message: `Рабочие шахт и заводов (${communistCount} чел.) недовольны накопленным богатством казны и требуют перемен!`,
+                        choices: [
+                            {
+                                label: `За равноправие! (разделить казну на ${communistCount})`,
+                                icon: '🚩',
+                                apply: function(hm) {
+                                    const before = hm.resources.money;
+                                    const share  = Math.floor(before / communistCount);
+                                    hm.resources.money = share;
+                                    return { message: `Казна разделена между рабочими! Осталось ${share} 💰 (было ${before} 💰).`, ok: true };
+                                }
+                            },
+                            {
+                                label: `Подавить (−${25 * communistCount} 🛡️)`,
+                                icon: '⚔️',
+                                apply: function(hm) {
+                                    const cost = 25 * communistCount;
+                                    if (hm.resources.defense < cost) {
+                                        return { message: `Не хватает ${cost} 🛡️ для подавления восстания!`, ok: false };
+                                    }
+                                    hm.resources.defense -= cost;
+                                    return { message: `Восстание подавлено силой. Потрачено ${cost} 🛡️.`, ok: true };
+                                }
+                            },
+                            {
+                                label: 'Игнорировать',
+                                icon: '🤷',
+                                apply: function(hm) {
+                                    let left = 0;
+                                    for (const b of communistBuildings) {
+                                        left += b.assignedWorkers || 0;
+                                        b.assignedWorkers = 0;
+                                    }
+                                    return { message: `Рабочие (${left} чел.) покинули шахты и заводы в знак протеста!`, ok: true };
                                 }
                             }
                         ]

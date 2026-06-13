@@ -11,7 +11,10 @@
         isDragging: false,
         dragStartX: 0,
         dragStartY: 0,
-        dragMoved: false
+        dragMoved: false,
+        stampMode: false,      // Режим застройки (ПКМ строит)
+        autoWork: false,       // Авто-работа
+        lastBuildType: null    // Последний тип здания в очереди/постройке
     };
 
     let config = { mapSize: 'medium', difficulty: 'normal' };
@@ -96,6 +99,62 @@
         // In-game menu
         document.getElementById('btnMenuInGame').addEventListener('click', backToMenu);
 
+        // Settings (gear) button — legend toggle
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const toggleLegend = document.getElementById('toggleLegend');
+        const mapLegend = document.getElementById('mapLegend');
+        if (settingsBtn && settingsMenu) {
+            settingsBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                settingsMenu.style.display = settingsMenu.style.display === 'block' ? 'none' : 'block';
+            });
+            document.addEventListener('click', e => {
+                if (settingsMenu.style.display === 'block' &&
+                    !settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+                    settingsMenu.style.display = 'none';
+                }
+            });
+        }
+        if (toggleLegend && mapLegend) {
+            toggleLegend.addEventListener('change', () => {
+                mapLegend.style.display = toggleLegend.checked ? '' : 'none';
+            });
+        }
+
+        // Stamp mode toggle
+        const toggleStampMode = document.getElementById('toggleStampMode');
+        const stampHint = document.getElementById('stampHint');
+        if (toggleStampMode) {
+            toggleStampMode.addEventListener('change', () => {
+                window.GameState.stampMode = toggleStampMode.checked;
+                if (stampHint) {
+                    stampHint.style.display = toggleStampMode.checked ? 'block' : 'none';
+                    _updateStampHint();
+                }
+                if (window.UI) window.UI.showNotification(
+                    toggleStampMode.checked
+                        ? '🖱️ Режим застройки включён — ПКМ по пустой клетке строит последнее здание'
+                        : '🖱️ Режим застройки выключен',
+                    3000
+                );
+            });
+        }
+
+        // Auto-work toggle
+        const toggleAutoWork = document.getElementById('toggleAutoWork');
+        if (toggleAutoWork) {
+            toggleAutoWork.addEventListener('change', () => {
+                window.GameState.autoWork = toggleAutoWork.checked;
+                if (window.UI) window.UI.showNotification(
+                    toggleAutoWork.checked
+                        ? '👷 Авто-работа включена — рабочие назначаются автоматически'
+                        : '👷 Авто-работа выключена',
+                    3000
+                );
+            });
+        }
+
         // Map mode toggle
         const mapModeToggle = document.getElementById('mapModeToggle');
         if (mapModeToggle) {
@@ -114,6 +173,19 @@
         }
     }
 
+    window._updateStampHint = function() {
+        const el = document.getElementById('stampHintType');
+        if (!el) return;
+        const type = window.GameState.lastBuildType;
+        if (type && window.GameConfig && window.GameConfig.BUILDINGS[type]) {
+            const bc = window.GameConfig.BUILDINGS[type];
+            el.textContent = bc.icon + ' ' + bc.name;
+        } else {
+            el.textContent = 'Нет последнего здания';
+        }
+    };
+
+    // Expose for ui-panel to call after queuing a build
     function openSetupModal() {
         if (setupModal) setupModal.style.display = 'flex';
     }
@@ -209,12 +281,44 @@
         });
         canvas.addEventListener('mouseleave', () => { window.GameState.isDragging = false; });
 
-        // ПКМ — быстрое назначение/снятие рабочих
+        // ПКМ — застройка (stamp) или быстрое назначение рабочих
         canvas.addEventListener('contextmenu', e => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const hex = HM.pixelToHex(e.clientX - rect.left, e.clientY - rect.top);
             if (!hex) return;
+
+            const key = hex.col + ',' + hex.row;
+            const building = HM.buildings[key];
+            const inQueue  = HM.buildQueue.find(q => q.col === hex.col && q.row === hex.row);
+
+            // Stamp mode: ПКМ по пустой клетке → строим последнее здание
+            if (window.GameState.stampMode && !building && !inQueue) {
+                const type = window.GameState.lastBuildType;
+                if (!type) {
+                    UI.showNotification('🖱️ Режим застройки: сначала постройте любое здание вручную', 3000);
+                    return;
+                }
+                const result = window.EconomyEngine.queueBuild(HM, hex.col, hex.row, type);
+                if (result.ok) {
+                    const bc = window.GameConfig.BUILDINGS[type];
+                    UI.showNotification(bc.icon + ' ' + bc.name + ' — поставлено в очередь');
+                    UI.updateResourceBar();
+                    UI.startConstructionAnim();
+                    // Auto-work: if enabled, will trigger on completion in processTurn
+                    if (window.GameState.selectedCell &&
+                        window.GameState.selectedCell.col === hex.col &&
+                        window.GameState.selectedCell.row === hex.row) {
+                        UI.openPanel(hex.col, hex.row);
+                    }
+                    R.render();
+                } else {
+                    UI.showNotification('⚠️ ' + result.reason, 2500);
+                }
+                return;
+            }
+
+            // Default: quick assign/remove workers
             if (window.UIPanel) window.UIPanel.quickAssignWorkers(hex.col, hex.row);
         });
 

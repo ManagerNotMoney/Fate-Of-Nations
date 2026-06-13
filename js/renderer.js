@@ -14,7 +14,9 @@
         mine:        { fill: '#71717a', stroke: '#3f3f46', radius: 0.30 },
         port:        { fill: '#0ea5e9', stroke: '#0369a1', radius: 0.30 },
         local_admin: { fill: '#64748b', stroke: '#334155', radius: 0.32 },
-        factory:     { fill: '#e8795a', stroke: '#c2410c', radius: 0.32 }
+        factory:     { fill: '#e8795a', stroke: '#c2410c', radius: 0.32 },
+        warehouse:   { fill: '#8b5cf6', stroke: '#6d28d9', radius: 0.30 },
+        sawmill:     { fill: '#a16207', stroke: '#713f12', radius: 0.30 }
     };
 
     window.Renderer = {
@@ -218,6 +220,22 @@
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(cfg.icon, cx, cy);
+            }
+
+            // Level indicator for upgraded buildings
+            if (col !== undefined && row !== undefined) {
+                const b = HM.buildings[col + ',' + row];
+                if (b && b.level && b.level > 1) {
+                    ctx.save();
+                    ctx.font = (s * 0.22) + 'px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#f4b942';
+                    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                    ctx.shadowBlur = 3;
+                    ctx.fillText('⭐', cx + s * 0.28, cy - s * 0.28);
+                    ctx.restore();
+                }
             }
 
             // Mine mode indicator

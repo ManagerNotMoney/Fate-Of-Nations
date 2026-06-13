@@ -35,7 +35,11 @@
             if (!cfg || !cfg.workersRequired) return { ok: false, reason: 'Здание не требует рабочих' };
 
             const assigned = b.assignedWorkers || 0;
-            const maxWorkers = cfg.workersMax || cfg.workersRequired;
+            const level = b.level || 1;
+            let maxWorkers = cfg.workersMax || cfg.workersRequired;
+            if (cfg.levelWorkersMax && cfg.levelWorkersMax[level] !== undefined) {
+                maxWorkers = cfg.levelWorkersMax[level];
+            }
             if (assigned >= maxWorkers) return { ok: false, reason: 'Уже достигнут максимум рабочих' };
             if (this.getFreeWorkers(hexMap) <= 0) return { ok: false, reason: 'Нет свободных жителей' };
 
@@ -108,7 +112,8 @@
 
         /**
          * Returns how many residents live in a specific building,
-         * distributing total population in build order (townhall first).
+         * based on the persistent citizen registry (each citizen
+         * has a sticky "home" assignment).
          * @returns {{ residents: number, max: number } | null}
          */
         getBuildingResidents: function(hexMap, col, row) {
@@ -117,23 +122,181 @@
             const cfg = C.BUILDINGS[b.type];
             if (!cfg || !cfg.maxResidents) return null;
 
-            const residentialBuildings = Object.values(hexMap.buildings)
-                .filter(bd => C.BUILDINGS[bd.type]?.maxResidents)
-                .sort((a, bd) => {
-                    if (a.type === 'townhall') return -1;
-                    if (bd.type === 'townhall') return 1;
-                    return (a.builtAt || 0) - (bd.builtAt || 0);
-                });
+            this.ensureCitizens(hexMap);
+            const key = col + ',' + row;
+            const residents = hexMap.citizens.filter(c => c.home === key).length;
+            return { residents, max: cfg.maxResidents };
+        },
 
-            let remaining = Math.floor(hexMap.resources.population);
-            for (const rb of residentialBuildings) {
-                const cap = C.BUILDINGS[rb.type].maxResidents;
-                const residents = Math.min(remaining, cap);
-                if (rb.col === col && rb.row === row) return { residents, max: cap };
-                remaining -= residents;
-                if (remaining <= 0) break;
+        /** Makes sure hexMap.citizens exists. */
+        ensureCitizens: function(hexMap) {
+            if (!hexMap.citizens) hexMap.citizens = [];
+            if (!hexMap._nextCitizenId) hexMap._nextCitizenId = 1;
+        },
+
+        /** Total housing capacity provided by current buildings (townhall + houses). */
+        getHousingCapacity: function(hexMap) {
+            let cap = 0;
+            for (const b of Object.values(hexMap.buildings)) {
+                const cfg = C.BUILDINGS[b.type];
+                if (cfg && cfg.maxResidents) cap += cfg.maxResidents;
             }
-            return { residents: 0, max: cfg.maxResidents };
+            return cap;
+        },
+
+        /**
+         * Syncs the citizen registry to the current population count,
+         * (re)assigns housing to homeless citizens, and evicts citizens
+         * who have nowhere to live (emigration).
+         * @returns {number} number of citizens that emigrated this turn
+         */
+        syncCitizens: function(hexMap) {
+            this.ensureCitizens(hexMap);
+            const citizens = hexMap.citizens;
+
+            // Free up citizens whose home building no longer exists
+            for (const c of citizens) {
+                if (c.home && !hexMap.buildings[c.home]) c.home = null;
+            }
+
+            // Match citizen count to population (growth/starvation)
+            const target = Math.max(0, Math.floor(hexMap.resources.population));
+            while (citizens.length < target) {
+                citizens.push({ id: hexMap._nextCitizenId++, home: null });
+            }
+            while (citizens.length > target) {
+                let idx = citizens.findIndex(c => c.home === null);
+                if (idx === -1) idx = citizens.length - 1;
+                citizens.splice(idx, 1);
+            }
+
+            // Assign housing to homeless citizens
+            const occupancy = {};
+            for (const c of citizens) if (c.home) occupancy[c.home] = (occupancy[c.home] || 0) + 1;
+
+            for (const c of citizens) {
+                if (c.home) continue;
+                for (const b of Object.values(hexMap.buildings)) {
+                    const cfg = C.BUILDINGS[b.type];
+                    if (!cfg || !cfg.maxResidents) continue;
+                    const key = b.col + ',' + b.row;
+                    const occ = occupancy[key] || 0;
+                    if (occ < cfg.maxResidents) {
+                        c.home = key;
+                        occupancy[key] = occ + 1;
+                        break;
+                    }
+                }
+            }
+
+            // Evict remaining homeless citizens — no housing for them
+            const capacity = this.getHousingCapacity(hexMap);
+            let evicted = 0;
+            while (citizens.length > capacity) {
+                const idx = citizens.findIndex(c => c.home === null);
+                if (idx === -1) break;
+                citizens.splice(idx, 1);
+                evicted++;
+            }
+            if (evicted > 0) {
+                hexMap.resources.population = Math.max(0, hexMap.resources.population - evicted);
+            }
+            return evicted;
+        },
+
+        /**
+         * Computes which building each working citizen commutes to,
+         * preferring the job closest to that citizen's home. Returns a
+         * map of citizenId -> jobBuildingKey ('col,row').
+         */
+        computeCitizenJobs: function(hexMap) {
+            this.ensureCitizens(hexMap);
+            const jobBuildings = [];
+            for (const b of Object.values(hexMap.buildings)) {
+                const n = b.assignedWorkers || 0;
+                if (n > 0) jobBuildings.push({ key: b.col + ',' + b.row, col: b.col, row: b.row, slots: n });
+            }
+
+            const assignments = {};
+            const used = new Set();
+            for (const jb of jobBuildings) {
+                for (let i = 0; i < jb.slots; i++) {
+                    let best = null, bestDist = Infinity;
+                    for (const c of hexMap.citizens) {
+                        if (used.has(c.id)) continue;
+                        let dist = 9999;
+                        if (c.home) {
+                            const [hc, hr] = c.home.split(',').map(Number);
+                            dist = hexMap.hexDistance(hc, hr, jb.col, jb.row);
+                        }
+                        if (dist < bestDist) { bestDist = dist; best = c; }
+                    }
+                    if (best) { used.add(best.id); assignments[best.id] = jb.key; }
+                    else break;
+                }
+            }
+            return assignments;
+        },
+
+        /**
+         * Returns the local_admin building that "owns" the district
+         * containing (col, row): districts are claimed by seniority —
+         * the earliest-built active admin whose radius (7) covers the
+         * cell wins, regardless of which admin is closer.
+         */
+        getDistrictOwner: function(hexMap, col, row) {
+            const admins = Object.values(hexMap.buildings)
+                .filter(b => b.type === 'local_admin' && (b.assignedWorkers || 0) >= 1)
+                .sort((a, b) => (a.builtAt || 0) - (b.builtAt || 0));
+
+            for (const b of admins) {
+                if (hexMap.hexDistance(col, row, b.col, b.row) <= 7) return b;
+            }
+            return null;
+        },
+
+        /**
+         * Returns population stats for the district owned by the
+         * local_admin at (col, row): how many citizens live there
+         * (counting only cells where this admin is the senior/closest
+         * owner — overlapping districts don't double-count), and where
+         * those citizens commute to work.
+         * @returns {{ residents, workInside, workOutside, unemployed }}
+         */
+        getDistrictStats: function(hexMap, col, row) {
+            this.ensureCitizens(hexMap);
+            const jobs = this.computeCitizenJobs(hexMap);
+            const self = hexMap.buildings[col + ',' + row];
+            let residents = 0, workInside = 0, workOutside = 0, unemployed = 0, commutersIn = 0;
+
+            const isHere = (owner) => owner && self && owner.col === self.col && owner.row === self.row;
+
+            for (const c of hexMap.citizens) {
+                let homeOwner = null;
+                if (c.home) {
+                    const [hc, hr] = c.home.split(',').map(Number);
+                    homeOwner = this.getDistrictOwner(hexMap, hc, hr);
+                }
+                const jobKey = jobs[c.id];
+                let jobOwner = null;
+                if (jobKey) {
+                    const [jc, jr] = jobKey.split(',').map(Number);
+                    jobOwner = this.getDistrictOwner(hexMap, jc, jr);
+                }
+
+                const livesHere = isHere(homeOwner);
+                const worksHere = isHere(jobOwner);
+
+                if (livesHere) {
+                    residents++;
+                    if (!jobKey) unemployed++;
+                    else if (worksHere) workInside++;
+                    else workOutside++;
+                }
+                if (worksHere && !livesHere) commutersIn++;
+            }
+
+            return { residents, workInside, workOutside, unemployed, commutersIn, workingHere: workInside + commutersIn };
         },
 
         /**
@@ -148,8 +311,8 @@
                 if (dist <= radius && dist > 0) {
                     const cfg = C.BUILDINGS[b.type];
                     if (!cfg) continue;
-                    // Only count residents in houses (not townhall, not workers)
-                    if (b.type === 'house') {
+                    // Count residents in houses and townhall (not workers)
+                    if (b.type === 'house' || b.type === 'townhall') {
                         const res = this.getBuildingResidents(hexMap, b.col, b.row);
                         if (res) pop += res.residents;
                     }
@@ -197,11 +360,21 @@
         getDynamicCost: function(hexMap, buildingType) {
             const cfg = C.BUILDINGS[buildingType];
             if (!cfg) return {};
+
+            // ── Townhall level 2 discount: -4% to building costs ──
+            let discount = 1;
+            const thKey = Object.keys(hexMap.buildings).find(k => hexMap.buildings[k].type === 'townhall');
+            const th = thKey ? hexMap.buildings[thKey] : null;
+            const thCfg = C.BUILDINGS['townhall'];
+            if (th && (th.level || 1) >= 2 && (th.assignedWorkers || 0) >= 2 && thCfg.level2BuildDiscount) {
+                discount = 1 - thCfg.level2BuildDiscount;
+            }
+
             if (buildingType === 'local_admin') {
                 const builtCount  = Object.values(hexMap.buildings).filter(b => b.type === 'local_admin').length;
                 const queuedCount = hexMap.buildQueue.filter(q => q.type === 'local_admin').length;
                 const base = 500 + queuedCount * 250;
-                const multiplier = 1 + builtCount * 0.02;
+                const multiplier = (1 + builtCount * 0.02) * discount;
                 return { money: Math.ceil(base * multiplier) };
             }
 
@@ -212,7 +385,7 @@
             const builtSame  = Object.values(hexMap.buildings).filter(b => b.type === buildingType).length;
             const queuedSame = hexMap.buildQueue.filter(q => q.type === buildingType).length;
             const totalSame  = builtSame + queuedSame;
-            const multiplier = 1 + totalSame * 0.02;
+            const multiplier = (1 + totalSame * 0.02) * discount;
 
             const result = {};
             for (const [res, amt] of Object.entries(baseCost)) {
@@ -256,7 +429,7 @@
                 if (buildingType === 'farm')    return { ok: false, reason: 'Ферму можно строить только на плодородной почве 🌱' };
                 if (buildingType === 'orchard') return { ok: false, reason: 'Сад нельзя строить на песке 🌿' };
                 if (buildingType === 'mine')    return { ok: false, reason: 'Шахту можно строить только в горах ⛰️' };
-                if (buildingType === 'port')    return { ok: false, reason: 'Порт можно строить только на море 🌊' };
+                if (buildingType === 'port')    return { ok: false, reason: 'Порт можно строить только на песке 🏖️' };
                 return { ok: false, reason: 'Нельзя строить здесь' };
             }
 
@@ -277,7 +450,7 @@
             if (!hexMap.townHallBuilt) return { ok: false, reason: 'Сначала постройте ратушу' };
 
             // Territory check (mine/port can be outside city borders)
-            const skipTerritoryCheck = buildingType === 'mine' || buildingType === 'port';
+            const skipTerritoryCheck = buildingType === 'mine';
             if (!skipTerritoryCheck) {
                 const owner = hexMap.getOwner(col, row);
                 const cityName = this._getCityName(hexMap);
@@ -360,9 +533,9 @@
             // (safe: cancelling returns money based on current queue state)
             if (q.type === 'local_admin') {
                 const builtCount  = Object.values(hexMap.buildings).filter(b => b.type === 'local_admin').length;
-                // queuedCount после splice уже уменьшился на 1, поэтому считаем без +1
+                // queuedCount после splice уже уменьшился на 1, поэтому добавляем +1
                 const queuedCount = hexMap.buildQueue.filter(q2 => q2.type === 'local_admin').length;
-                const base = 500 + queuedCount * 250;
+                const base = 500 + (queuedCount + 1) * 250;
                 const multiplier = 1 + builtCount * 0.02;
                 hexMap.resources.money += Math.ceil(base * multiplier);
             } else {
@@ -386,6 +559,13 @@
             if (!b) return { ok: false, reason: 'Здание не найдено' };
             if (b.type === 'townhall') return { ok: false, reason: 'Ратушу нельзя снести' };
 
+            const cfg = C.BUILDINGS[b.type];
+            if (cfg && cfg.maxResidents && hexMap.citizens) {
+                for (const c of hexMap.citizens) {
+                    if (c.home === key) c.home = null;
+                }
+            }
+
             delete hexMap.buildings[key];
 
             // Recalculate territory (local_admin loss changes territory)
@@ -393,6 +573,44 @@
             this.computeDeltas(hexMap);
             return { ok: true };
         },
+
+        // ════════════════════════════════════════════════════════
+        // BUILDING UPGRADES
+        // ════════════════════════════════════════════════════════
+
+        /**
+         * Upgrades a building to the next level.
+         * @returns {{ ok: boolean, reason?: string }}
+         */
+        upgradeBuilding: function(hexMap, col, row) {
+            const key = col + ',' + row;
+            const b = hexMap.buildings[key];
+            if (!b) return { ok: false, reason: 'Здание не найдено' };
+
+            const cfg = C.BUILDINGS[b.type];
+            if (!cfg) return { ok: false, reason: 'Неизвестное здание' };
+            if (!cfg.maxLevel || cfg.maxLevel <= 1) return { ok: false, reason: 'Это здание нельзя улучшить' };
+
+            const currentLevel = b.level || 1;
+            if (currentLevel >= cfg.maxLevel) return { ok: false, reason: 'Достигнут максимальный уровень' };
+
+            const upgradeCost = cfg.upgradeCost || {};
+            for (const [res, amt] of Object.entries(upgradeCost)) {
+                if ((hexMap.resources[res] || 0) < amt) {
+                    return { ok: false, reason: `Недостаточно ресурсов: нужно ${amt} ${C.RESOURCES[res]?.icon || res}` };
+                }
+            }
+
+            // Deduct cost
+            for (const [res, amt] of Object.entries(upgradeCost)) {
+                hexMap.resources[res] -= amt;
+            }
+
+            b.level = currentLevel + 1;
+            this.computeDeltas(hexMap);
+            return { ok: true };
+        },
+
 
 
 
@@ -405,6 +623,7 @@
             const d = {
                 money: C.BASE_INCOME,
                 wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0,
+                coal: 0, steel: 0, wood: 0,
                 population: 0, defense: 0
             };
             const events = [];
@@ -426,13 +645,10 @@
                 const cfg = C.BUILDINGS[b.type];
                 if (!cfg) continue;
 
-                // Skip production from buildings on strike
+                // Skip production from buildings on strike (applies to ALL building types)
                 const bKey = b.col + ',' + b.row;
                 if (strikeTarget === bKey) {
-                    // Building is on strike — count as idle
-                    if (cfg.workersRequired) {
-                        idleBuildings++;
-                    }
+                    if (cfg.workersRequired) idleBuildings++;
                     continue;
                 }
 
@@ -445,8 +661,12 @@
                     const mode = b.mineMode || 'gold';
                     const cfgProd = cfg.mineModeProduction?.[mode];
                     if (cfgProd && this.isBuildingActive(hexMap, b.col, b.row)) {
+                        const level = b.level || 1;
+                        const assigned = b.assignedWorkers || 0;
+                        const extraWorkers = level === 2 ? Math.max(0, assigned - cfg.workersRequired) : 0;
+                        const factor = 1 + extraWorkers * 0.25;
                         for (const [res, amt] of Object.entries(cfgProd)) {
-                            d[res] = (d[res] || 0) + amt;
+                            d[res] = (d[res] || 0) + Math.round(amt * factor * 10) / 10;
                         }
                     } else if (!this.isBuildingActive(hexMap, b.col, b.row)) {
                         idleBuildings++;
@@ -498,8 +718,17 @@
                     if ((b.assignedWorkers || 0) >= cfg.workersRequired) {
                         // Skip mine - handled separately with mode switching
                         if (b.type !== 'mine') {
-                            for (const [res, amt] of Object.entries(cfg.production || {})) {
-                                d[res] = (d[res] || 0) + amt;
+                            // Farm: level 2 gives 1.5× base per worker, up to 2 workers
+                            if (b.type === 'farm') {
+                                const level = b.level || 1;
+                                const workers = b.assignedWorkers || 0;
+                                const baseWheat = cfg.production.wheat || 3;
+                                const perWorker = baseWheat * (level === 2 ? 1.5 : 1);
+                                d.wheat = (d.wheat || 0) + Math.round(perWorker * workers * 10) / 10;
+                            } else {
+                                for (const [res, amt] of Object.entries(cfg.production || {})) {
+                                    d[res] = (d[res] || 0) + amt;
+                                }
                             }
                         }
                     } else {
@@ -534,10 +763,13 @@
             // ── Mill: wheat → bread conversion ───────────────
             for (const b of buildings) {
                 if (b.type === 'mill' && this.isBuildingActive(hexMap, b.col, b.row)) {
+                    const level = b.level || 1;
+                    const wheatNeeded = Math.round(2 * (level === 2 ? 1.5 : 1));
+                    const breadProduced = Math.round(2 * (level === 2 ? 1.5 : 1));
                     const wheatAvailable = hexMap.resources.wheat + d.wheat;
-                    if (wheatAvailable >= 2) {
-                        d.wheat -= 2;
-                        d.bread += 2;
+                    if (wheatAvailable >= wheatNeeded) {
+                        d.wheat -= wheatNeeded;
+                        d.bread += breadProduced;
                     } else {
                         idleBuildings++;
                     }
@@ -604,6 +836,12 @@
 
             hexMap.recalculateTerritory();
 
+            // ── Housing & emigration ──────────────────────────
+            const emigrated = this.syncCitizens(hexMap);
+            if (emigrated > 0) {
+                hexMap.lastEvents.push({ type: 'emigration', count: emigrated });
+            }
+
             // ── Win condition tracking ────────────────────────
             const WIN_POP   = 200;
             const WIN_MONEY = 300000;
@@ -638,7 +876,73 @@
                 }
             }
 
+            // ── Resource caps (150 base + 150 per warehouse) ──
+            const warehouseCount = Object.values(hexMap.buildings).filter(b => b.type === 'warehouse').length;
+            const maxStorage = 150 + warehouseCount * 150;
+            const cappedResources = ['wheat', 'bread', 'apples', 'fish', 'iron', 'copper', 'coal', 'steel', 'wood'];
+            for (const res of cappedResources) {
+                hexMap.resources[res] = Math.min(hexMap.resources[res] || 0, maxStorage);
+            }
+
             return completedBuildings;
+        },
+
+        /**
+         * Returns ideology counts for workers in buildings inside the district
+         * (radius 7) around the local_admin at (col, row).
+         * @returns {{ conservative, communist, liberal, militarist, anarchist, dominant, dominantMeta }}
+         */
+        getDistrictIdeology: function(hexMap, col, row) {
+            const IDEOLOGY_MAP = {
+                farm:        'conservative',
+                mill:        'conservative',
+                mine:        'communist',
+                factory:     'communist',
+                orchard:     'liberal',
+                port:        'liberal',
+                townhall:    'militarist',
+                local_admin: 'militarist',
+                barracks:    'militarist',
+                sawmill:     'conservative',
+                house:       null,
+            };
+            const IDEO_META = {
+                conservative: { icon: '🌾', label: 'Консерваторы',  color: '#86efac' },
+                communist:    { icon: '⚒️',  label: 'Коммунисты',    color: '#f87171' },
+                liberal:      { icon: '🍎', label: 'Либералы',       color: '#fbbf24' },
+                militarist:   { icon: '⚔️', label: 'Кратократы',    color: '#a78bfa' },
+                anarchist:    { icon: '🔥', label: 'Анархисты',      color: '#94a3b8' },
+            };
+            const counts = { conservative: 0, communist: 0, liberal: 0, militarist: 0, anarchist: 0 };
+            let districtFreeWorkers = 0;
+
+            for (const key of Object.keys(hexMap.buildings)) {
+                const b = hexMap.buildings[key];
+                const dist = hexMap.hexDistance(col, row, b.col, b.row);
+                if (dist > 7) continue;
+                const workers = b.assignedWorkers || 0;
+                const ideo = IDEOLOGY_MAP[b.type];
+                if (ideo && workers > 0) counts[ideo] += workers;
+            }
+
+            // Approximate free workers in district from house residents
+            this.ensureCitizens(hexMap);
+            const jobs = this.computeCitizenJobs(hexMap);
+            for (const c of hexMap.citizens) {
+                if (!c.home) continue;
+                const [hc, hr] = c.home.split(',').map(Number);
+                if (hexMap.hexDistance(col, row, hc, hr) > 7) continue;
+                if (!jobs[c.id]) districtFreeWorkers++;
+            }
+            counts.anarchist = districtFreeWorkers;
+
+            const total = Object.values(counts).reduce((s, v) => s + v, 0);
+            let dominant = null, dominantCount = 0;
+            for (const [key, val] of Object.entries(counts)) {
+                if (val > dominantCount) { dominantCount = val; dominant = key; }
+            }
+
+            return { ...counts, total, dominant, dominantMeta: dominant ? IDEO_META[dominant] : null, IDEO_META };
         },
 
         // ════════════════════════════════════════════════════════
