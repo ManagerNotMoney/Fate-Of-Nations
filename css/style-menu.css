@@ -523,6 +523,42 @@
     letter-spacing: 0.3px;
 }
 
+
+/* ═══ CHANGELOG UPDATE HEADER ════════════════════════ */
+.changelog-update-header {
+    background: linear-gradient(135deg, rgba(244,185,66,0.08), rgba(79,142,247,0.05));
+    border: 1px solid rgba(244,185,66,0.2);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+}
+.changelog-update-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), var(--accent), var(--gold));
+    background-size: 200% 100%;
+    animation: progress-shimmer 3s linear infinite;
+}
+.changelog-update-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+}
+.changelog-update-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
 /* ═══ RESPONSIVE CHANGELOG ═════════════════════════════ */
 @media (max-width: 1100px) {
     #changelogPanel {

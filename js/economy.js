@@ -343,7 +343,7 @@
             let income = nearbyPop * (cfg.moneyPerResident || 1);
             // Competition penalty: another market within 5 tiles → income ÷ 3
             if (this.hasNearbyMarket(hexMap, col, row)) {
-                income = Math.floor(income / 3);
+                income = Math.floor(income / 4);
             }
             return income;
         },

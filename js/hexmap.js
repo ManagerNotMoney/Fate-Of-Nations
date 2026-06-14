@@ -34,11 +34,27 @@
         // HEX GEOMETRY  (pointy-top hexes, odd-r offset)
         // ════════════════════════════════════════════════════
 
-        hexSize:   function() { return C.BASE_HEX_SIZE * this.zoom; },
-        hexWidth:  function() { return this.hexSize() * C.SQRT3; },
-        hexHeight: function() { return this.hexSize() * 2; },
-        xOffset:   function() { return this.hexWidth(); },
-        yOffset:   function() { return this.hexHeight() * 0.75; },
+        _cachedZoom: -1,
+        _cachedSize: 0,
+        _cachedWidth: 0,
+        _cachedHeight: 0,
+        _cachedYOffset: 0,
+
+        _updateGeomCache: function() {
+            if (this.zoom !== this._cachedZoom) {
+                this._cachedZoom    = this.zoom;
+                this._cachedSize    = C.BASE_HEX_SIZE * this.zoom;
+                this._cachedWidth   = this._cachedSize * C.SQRT3;
+                this._cachedHeight  = this._cachedSize * 2;
+                this._cachedYOffset = this._cachedHeight * 0.75;
+            }
+        },
+
+        hexSize:   function() { this._updateGeomCache(); return this._cachedSize; },
+        hexWidth:  function() { this._updateGeomCache(); return this._cachedWidth; },
+        hexHeight: function() { this._updateGeomCache(); return this._cachedHeight; },
+        xOffset:   function() { this._updateGeomCache(); return this._cachedWidth; },
+        yOffset:   function() { this._updateGeomCache(); return this._cachedYOffset; },
 
         /** Converts hex grid coordinates to canvas pixel position (top-left of bounding box). */
         hexToPixel: function(col, row) {
@@ -98,6 +114,8 @@
                     }
                 }
             }
+            // Invalidate renderer vertex/border cache
+            if (window.Renderer?._invalidateVertCache) window.Renderer._invalidateVertCache();
         },
 
         /** Updates all territory entries when a city is renamed. */
@@ -323,7 +341,8 @@
         },
 
         /** Centers the camera so the map fills the canvas on first load. */
-        center: function(canvasW, canvasH) {
+        center: function(canvasW, canvasH, keepCamera) {
+            if (keepCamera) return; // Camera position already restored from save
             const mapW = this.cols * C.BASE_HEX_SIZE * C.SQRT3 + C.BASE_HEX_SIZE * C.SQRT3 / 2;
             const mapH = this.rows * C.BASE_HEX_SIZE * 2 * 0.75 + C.BASE_HEX_SIZE * 2 * 0.25;
             this.cameraX = (canvasW - mapW) / 2;

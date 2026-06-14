@@ -27,6 +27,9 @@
     const howToModal   = document.getElementById('howToModal');
     const aboutModal   = document.getElementById('aboutModal');
 
+    // ─── Auto-save interval (every turn already; also every 30s as safety net) ──
+    let _autoSaveTimer = null;
+
     // ─── Particles ─────────────────────────────────────────
     function initParticles() {
         const container = document.getElementById('particles');
@@ -48,6 +51,34 @@
 
     // ─── Menu ──────────────────────────────────────────────
     function initMenu() {
+        // Show "Continue" button if save exists
+        _refreshContinueBtn();
+
+        // "Продолжить" button
+        const btnContinue = document.getElementById('btnContinue');
+        if (btnContinue) {
+            btnContinue.addEventListener('click', () => {
+                const data = window.SaveGame?.load();
+                if (!data) return;
+                startMenu.classList.add('hide');
+                setTimeout(() => {
+                    startMenu.style.display = 'none';
+                    loadingScreen.style.display = 'flex';
+                    document.getElementById('loadingBar').style.width = '0%';
+                    document.getElementById('loadingText').textContent = 'Загрузка сохранения...';
+                    setTimeout(() => {
+                        document.getElementById('loadingBar').style.width = '100%';
+                        document.getElementById('loadingText').textContent = 'Восстановление города...';
+                        setTimeout(() => {
+                            loadingScreen.style.display = 'none';
+                            gameScreen.style.display = 'block';
+                            loadGame(data);
+                        }, 400);
+                    }, 500);
+                }, 350);
+            });
+        }
+
         // "Начать игру" → открываем настройки
         document.getElementById('btnPlay').addEventListener('click', openSetupModal);
 
@@ -196,6 +227,8 @@
 
     // ─── Game Flow ─────────────────────────────────────────
     function startGame() {
+        // Clear any existing save — this is a brand new game
+        if (window.SaveGame) window.SaveGame.clear();
         startMenu.classList.add('hide');
         setTimeout(() => {
             startMenu.style.display = 'none';
@@ -238,11 +271,83 @@
         R.render();
         UI.init();
         initCanvasEvents();
+        _startAutoSave();
+    }
+
+    function loadGame(data) {
+        if (window.UI && window.UI.cleanup) window.UI.cleanup();
+        window.GameState.currentTurn = 1; // will be overwritten by restore
+        document.getElementById('turnCounter').textContent = '1';
+        // Init renderer first (needs canvas)
+        R.init('gameCanvas');
+        // Restore all state
+        const ok = window.SaveGame.restore(data);
+        if (!ok) {
+            // Fallback: start fresh
+            HM.generate(config.mapSize);
+        }
+        document.getElementById('turnCounter').textContent = window.GameState.currentTurn;
+        HM.center(R.canvas.width, R.canvas.height, /* keepCamera= */ true);
+        R.render();
+        UI.init();
+        initCanvasEvents();
+        _startAutoSave();
+        if (window.UI) window.UI.showNotification('💾 Игра загружена — ход ' + window.GameState.currentTurn, 3000);
+    }
+
+    function _refreshContinueBtn() {
+        const btn  = document.getElementById('btnContinue');
+        const info = document.getElementById('saveSlotInfo');
+        if (!btn) return;
+        const meta = window.SaveGame?.getMeta();
+        if (meta) {
+            btn.style.display = '';
+            if (info) {
+                const date = new Date(meta.savedAt);
+                const dateStr = date.toLocaleDateString('ru-RU', { day:'numeric', month:'short' }) +
+                    ' ' + date.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+                info.textContent = `${meta.cityName} · ход ${meta.turn} · ${dateStr}`;
+                info.style.display = '';
+            }
+        } else {
+            btn.style.display = 'none';
+            if (info) info.style.display = 'none';
+        }
+    }
+
+    function _startAutoSave() {
+        // Save after every endTurn — hook into UI.endTurn
+        if (!window._origEndTurn) {
+            window._origEndTurn = window.UI.endTurn.bind(window.UI);
+            window.UI.endTurn = function() {
+                window._origEndTurn();
+                if (window.SaveGame) window.SaveGame.save();
+            };
+        }
+        // Also save every 30 seconds as a safety net
+        clearInterval(_autoSaveTimer);
+        _autoSaveTimer = setInterval(() => {
+            if (gameScreen.style.display !== 'none') {
+                if (window.SaveGame) window.SaveGame.save();
+            }
+        }, 30000);
     }
 
     function backToMenu() {
+        const turns = window.GameState?.currentTurn || 0;
+        if (turns > 5) {
+            const cityName = window.HexMap?.cityName || window.GameConfig?.DEFAULT_CITY_NAME || 'город';
+            if (!confirm(`Вернуться в главное меню?\n\nПрогресс «${cityName}» (${turns} ходов) не сохранится — игра начнётся заново.`)) return;
+        }
+        clearInterval(_autoSaveTimer);
+        // Reset endTurn hook so it can be re-applied on next game
+        if (window._origEndTurn) {
+            window.UI.endTurn = window._origEndTurn;
+            window._origEndTurn = null;
+        }
         gameScreen.style.display = 'none';
         UI.closePanel();
+        _refreshContinueBtn();
         startMenu.style.display = 'flex';
         startMenu.classList.remove('hide');
     }

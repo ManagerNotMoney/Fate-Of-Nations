@@ -100,12 +100,12 @@
                 icon: '🏪',
                 cost: { money: 40 },
                 production: { money: 0 }, // Dynamic: based on nearby pop
-                turnsToComplete: 2,
+                turnsToComplete: 5,
                 allowedTiles: ['plain', 'fertile'],
                 unique: false,
                 marketRadius: 5,
-                moneyPerResident: 1,
-                description: 'Торговый центр. Приносит 1 монету за каждого жителя и работника в радиусе 4 клеток. Требует минимум 5 жителей в городе.'
+                moneyPerResident: 0.25,
+                description: 'Торговый центр. Приносит 0.25 монеты за каждого жителя и работника в радиусе 4 клеток. Требует минимум 5 жителей в городе. Строится 5 ходов.'
             },
             barracks: {
                 name: 'Казармы',
@@ -223,7 +223,7 @@
         /** Coins earned per population point per turn (from townhall) */
         MONEY_PER_POPULATION: 1,
         /** How far another market must be to NOT cause income penalty */
-        MARKET_COMPETITION_RADIUS: 5,
+        MARKET_COMPETITION_RADIUS: 4,
         /** Max residents in the townhall */
         TOWNHALL_MAX_RESIDENTS: 5
     };

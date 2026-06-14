@@ -126,13 +126,23 @@
         openCityNameModal: function(type) {
             if (!this.cityNameModal) return;
             const isDistrict = type === 'district';
-            this.cityNameModal.querySelector('h2').textContent         = isDistrict ? '🏢 Район создан!'          : '🏛️ Город основан!';
-            this.cityNameModal.querySelector('.modal-sub').textContent = isDistrict ? 'Дайте название новому району' : 'Дайте название вашему новому городу';
-            this.cityNameInput.placeholder                             = isDistrict ? 'Например, Старый город…'    : 'Например, Новая Надежда…';
-            this.cityNameModal.querySelector('.city-modal-icon').textContent = isDistrict ? '🏢' : '🏛️';
-            this.cityNameInput.value = '';
+            const isRename   = type === 'rename-city' || type === 'rename-district';
+            const isRenameDistrict = type === 'rename-district';
+
+            if (isRename) {
+                this.cityNameModal.querySelector('h2').textContent         = isRenameDistrict ? '🏢 Переименовать район'  : '🏛️ Переименовать город';
+                this.cityNameModal.querySelector('.modal-sub').textContent = isRenameDistrict ? 'Введите новое название района' : 'Введите новое название города';
+                this.cityNameModal.querySelector('.city-modal-icon').textContent = isRenameDistrict ? '🏢' : '🏛️';
+                this.cityNameInput.placeholder                             = isRenameDistrict ? 'Например, Старый город…'  : 'Например, Новая Надежда…';
+            } else {
+                this.cityNameModal.querySelector('h2').textContent         = isDistrict ? '🏢 Район создан!'          : '🏛️ Город основан!';
+                this.cityNameModal.querySelector('.modal-sub').textContent = isDistrict ? 'Дайте название новому району' : 'Дайте название вашему новому городу';
+                this.cityNameInput.placeholder                             = isDistrict ? 'Например, Старый город…'    : 'Например, Новая Надежда…';
+                this.cityNameModal.querySelector('.city-modal-icon').textContent = isDistrict ? '🏢' : '🏛️';
+                this.cityNameInput.value = '';
+            }
             this.cityNameModal.style.display = 'flex';
-            setTimeout(() => this.cityNameInput.focus(), 50);
+            setTimeout(() => { this.cityNameInput.focus(); this.cityNameInput.select(); }, 50);
         },
 
         closeCityModal: function() {
@@ -347,14 +357,20 @@
 
             if (b.type === 'townhall') {
                 const oldName = b.name || C.DEFAULT_CITY_NAME;
+                const isRename = !!b.name;
                 b.name = name;
                 HM.renameTerritory(oldName, name);
                 HM.claimTerritory(nc.col, nc.row, name, 3);
-                if (window.UI) window.UI.showNotification(`🏛️ Город «${name}» основан!`);
+                if (window.UI) window.UI.showNotification(
+                    isRename ? `🏛️ Город переименован в «${name}»` : `🏛️ Город «${name}» основан!`
+                );
             } else if (b.type === 'local_admin') {
+                const isRename = !!b.name;
                 b.name = name;
                 HM.recalculateTerritory();
-                if (window.UI) window.UI.showNotification(`🏢 Район «${name}» создан!`);
+                if (window.UI) window.UI.showNotification(
+                    isRename ? `🏢 Район переименован в «${name}»` : `🏢 Район «${name}» создан!`
+                );
             }
 
             window.GameState.namingCell = null;

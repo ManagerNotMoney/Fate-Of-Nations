@@ -95,6 +95,13 @@
                         if (building.type === 'local_admin' && (building.assignedWorkers || 0) >= 1) {
                             html += this._renderDistrictTab(building);
                         }
+                        // Rename button for townhall and local_admin
+                        if (building.type === 'townhall' || building.type === 'local_admin') {
+                            const renameIcon = building.type === 'townhall' ? '🏛️' : '🏢';
+                            html += `<button class=\"rename-btn\" data-action=\"rename\">
+                                ${renameIcon} Переименовать${building.name ? ' «' + building.name + '»' : ''}
+                            </button>`;
+                        }
                         // Demolish button (not for townhall)
                         if (building.type !== 'townhall') {
                             html += `<button class="demolish-btn" data-action="demolish" title="Снос безвозвратен">
@@ -525,6 +532,22 @@
                     }
                 });
             }
+
+            const renameBtn = this.buildingsList.querySelector('.rename-btn');
+            if (renameBtn) {
+                renameBtn.addEventListener('click', () => {
+                    const b = HM.buildings[col + ',' + row];
+                    if (!b) return;
+                    window.GameState.namingCell = { col, row, type: b.type };
+                    if (window.UIModals) {
+                        const modalType = b.type === 'local_admin' ? 'rename-district' : 'rename-city';
+                        window.UIModals.openCityNameModal(modalType);
+                        // Pre-fill with current name
+                        const input = document.getElementById('cityNameInput');
+                        if (input && b.name) input.value = b.name;
+                    }
+                });
+            }
         },
 
         _bindWorkerButtons: function(col, row) {
@@ -586,6 +609,24 @@
                     const perWorker = baseWheat * (level === 2 ? 1.5 : 1);
                     const total = Math.round(perWorker * workers * 10) / 10;
                     parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🌾 +${total} пшеницы/ход (${workers} раб.)</span>`);
+                } else if (building.type === 'mine') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const mode = building.mineMode || 'gold';
+                    const level = building.level || 1;
+                    const modeProduction = bc.mineModeProduction || {};
+                    const prod = modeProduction[mode] || { money: 5 };
+                    for (const [res, amt] of Object.entries(prod)) {
+                        const rc = C.RESOURCES[res];
+                        if (rc) {
+                            // Level 2: +25% per extra worker (up to 3 workers)
+                            const workers = building.assignedWorkers || 0;
+                            const maxBase = (bc.levelWorkersMax && bc.levelWorkersMax[1]) || 2;
+                            const extraWorkers = level >= 2 ? Math.max(0, workers - maxBase) : 0;
+                            const multiplier = 1 + extraWorkers * 0.25;
+                            const total = Math.round(amt * multiplier * 10) / 10;
+                            parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">${rc.icon} +${total} ${rc.name}/ход</span>`);
+                        }
+                    }
                 } else {
                     for (const [res, amt] of Object.entries(bc.production)) {
                         if (amt <= 0) continue;
@@ -718,7 +759,11 @@
                 return;
             }
 
-            const maxWorkers = bc.workersMax || bc.workersRequired;
+            const level = building.level || 1;
+            let maxWorkers = bc.workersMax || bc.workersRequired;
+            if (bc.levelWorkersMax && bc.levelWorkersMax[level] !== undefined) {
+                maxWorkers = bc.levelWorkersMax[level];
+            }
 
             // Если уже все назначены — снимаем всех (toggle)
             if ((building.assignedWorkers || 0) >= maxWorkers) {

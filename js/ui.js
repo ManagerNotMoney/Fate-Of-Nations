@@ -40,6 +40,13 @@
 
             if (!this._handlersBound) {
                 document.getElementById('btnEndTurn').addEventListener('click', () => this.endTurn());
+                document.addEventListener('keydown', (e) => {
+                    if (e.code !== 'Space') return;
+                    if (document.getElementById('gameScreen')?.style.display === 'none') return;
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    e.preventDefault();
+                    this.endTurn();
+                });
                 this._handlersBound = true;
             }
 
@@ -55,20 +62,47 @@
             const res = HM.resources;
             const del = HM.deltas;
 
+            const fmtNum = n => {
+                const abs = Math.abs(n);
+                if (abs >= 1_000_000) return (Math.floor(n / 100_000) / 10).toFixed(1).replace(/\.0$/, '') + 'м';
+                if (abs >= 1_000)     return (Math.floor(n / 100) / 10).toFixed(1).replace(/\.0$/, '') + 'к';
+                return String(Math.floor(n));
+            };
             const fmtDelta = d => {
                 const n = Math.round(d);
                 if (!n) return '';
                 return n > 0
-                    ? `<span class="res-delta pos">+${n}</span>`
-                    : `<span class="res-delta neg">${n}</span>`;
+                    ? `<span class="res-delta pos">+${fmtNum(n)}</span>`
+                    : `<span class="res-delta neg">${fmtNum(n)}</span>`;
             };
             const set = (id, val, delta) => {
                 const el = document.getElementById(id);
-                if (el) el.innerHTML = Math.floor(val) + fmtDelta(delta);
+                if (el) el.innerHTML = fmtNum(Math.floor(val)) + fmtDelta(delta);
             };
 
             set('resMoney',      res.money,                              del.money);
-            set('resFood',       res.bread + res.apples + res.fish,      del.bread + del.apples + del.fish);
+            // Food deficit indicator
+            const applesAvail = Math.max(0, res.apples + del.apples);
+            const fishAvail   = Math.max(0, res.fish   + del.fish);
+            const breadAvail  = Math.max(0, res.bread  + del.bread);
+            const totalFoodCap = applesAvail + fishAvail + breadAvail * C.FOOD_PER_POPULATION;
+            const foodDeficit  = res.population > 0 ? Math.max(0, res.population - totalFoodCap) : 0;
+
+            const foodChip = document.getElementById('resFoodChip');
+            if (foodChip) foodChip.classList.toggle('food-deficit', foodDeficit > 0);
+
+            const foodEl = document.getElementById('resFood');
+            if (foodEl) {
+                const foodDisplay = fmtNum(Math.floor(res.bread + res.apples + res.fish));
+                const deltaHtml = fmtDelta(del.bread + del.apples + del.fish);
+                if (foodDeficit > 0) {
+                    foodEl.innerHTML = foodDisplay + deltaHtml +
+                        `<span class="res-food-shortage"> −${fmtNum(Math.ceil(foodDeficit))}</span>`;
+                } else {
+                    foodEl.innerHTML = foodDisplay + deltaHtml;
+                }
+            }
+
             set('resRaw',        res.wheat,                              del.wheat);
             set('resResources',  res.iron + res.copper + res.wood,       del.iron + del.copper + del.wood);
             set('resPopulation', res.population,                         del.population);
@@ -82,7 +116,7 @@
             if (HM.townHallBuilt) {
                 const popIncome = Math.floor(res.population * C.MONEY_PER_POPULATION);
                 const el = document.getElementById('popIncomeHint');
-                if (el) el.textContent = popIncome > 0 ? `(+${popIncome} от жителей)` : '';
+                if (el) el.textContent = popIncome > 0 ? `(+${fmtNum(popIncome)} от жителей)` : '';
             }
         },
 

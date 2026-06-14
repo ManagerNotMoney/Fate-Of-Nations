@@ -19,6 +19,23 @@
         sawmill:     { fill: '#a16207', stroke: '#713f12', radius: 0.30 }
     };
 
+    // ── Precomputed hex vertex offsets (unit-circle, pointy-top) ──────────
+    // These are the 6 [cos, sin] pairs for angles: -30°, 30°, 90°, 150°, 210°, 270°
+    // Multiplied by hexSize at render time. Recalculated only when zoom changes.
+    const _HEX_ANGLES = [];
+    for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        _HEX_ANGLES.push([Math.cos(a), Math.sin(a)]);
+    }
+
+    // Vertex cache: stores [x,y] pairs for each hex, keyed by "col,row"
+    // Invalidated when zoom or camera changes.
+    let _vertCache = {};
+    let _vertCacheZoom = -1;
+
+    // Tile fill colors as resolved array (avoid repeated object lookup)
+    const _tileColors = {};
+
     window.Renderer = {
         canvas: null,
         ctx: null,
@@ -26,9 +43,11 @@
 
         init: function(canvasId) {
             this.canvas = document.getElementById(canvasId);
-            this.ctx = this.canvas.getContext('2d');
+            this.ctx = this.canvas.getContext('2d', { alpha: false }); // opaque canvas = faster compositing
             this.resize();
             window.addEventListener('resize', () => this.resize());
+            // Pre-resolve tile colors
+            for (const [type, def] of Object.entries(C.TILES)) _tileColors[type] = def.color;
         },
 
         setMapMode: function(mode) {
@@ -38,342 +57,357 @@
 
         resize: function() {
             if (!this.canvas) return;
-            this.canvas.width = window.innerWidth;
+            this.canvas.width  = window.innerWidth;
             this.canvas.height = window.innerHeight;
+            _vertCache = {}; // Camera didn't change but canvas did — safe to invalidate
             this.render();
         },
 
+        // ── Vertex helpers ──────────────────────────────────
+        _invalidateVertCache: function() { _vertCache = {}; _vertCacheZoom = HM.zoom; },
+
+        _getVerts: function(col, row, s) {
+            const key = col + ',' + row;
+            let v = _vertCache[key];
+            if (!v) {
+                v = new Array(6);
+                for (let i = 0; i < 6; i++) {
+                    v[i] = [s * _HEX_ANGLES[i][0], s * _HEX_ANGLES[i][1]];
+                }
+                _vertCache[key] = v;
+            }
+            return v;
+        },
+
+        // ── Fast hex path (inlined, no array allocation) ────
+        _hexPath: function(ctx, v, cx, cy) {
+            ctx.beginPath();
+            ctx.moveTo(v[0][0] + cx, v[0][1] + cy);
+            ctx.lineTo(v[1][0] + cx, v[1][1] + cy);
+            ctx.lineTo(v[2][0] + cx, v[2][1] + cy);
+            ctx.lineTo(v[3][0] + cx, v[3][1] + cy);
+            ctx.lineTo(v[4][0] + cx, v[4][1] + cy);
+            ctx.lineTo(v[5][0] + cx, v[5][1] + cy);
+            ctx.closePath();
+        },
+
+        // ── Main render ─────────────────────────────────────
         render: function() {
             if (!this.ctx || HM.data.length === 0) return;
-            const ctx = this.ctx;
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-            for (let r = 0; r < HM.rows; r++) {
+            // Invalidate vertex cache on zoom change (camera offset applied at draw time)
+            if (HM.zoom !== _vertCacheZoom) this._invalidateVertCache();
+
+            const ctx   = this.ctx;
+            const cw    = this.canvas.width;
+            const ch    = this.canvas.height;
+
+            // Fill background once (canvas is opaque)
+            ctx.fillStyle = '#080d18';
+            ctx.fillRect(0, 0, cw, ch);
+
+            // ── Precompute shared geometry for this frame ──
+            const s   = HM.hexSize();
+            const w   = HM.hexWidth();
+            const h   = HM.hexHeight();
+            const yOff = HM.yOffset();
+            const camX = HM.cameraX;
+            const camY = HM.cameraY;
+
+            // ── Frustum culling bounds ─────────────────────
+            // A hex is visible if its center is within (canvas + 1 hex margin)
+            const margin = s * 2;
+            const visX0 = -margin,       visX1 = cw + margin;
+            const visY0 = -margin,       visY1 = ch + margin;
+
+            // Row culling: find first/last visible row
+            const firstRow = Math.max(0, Math.floor((-camY - margin) / yOff) - 1);
+            const lastRow  = Math.min(HM.rows - 1, Math.ceil((ch - camY + margin) / yOff) + 1);
+
+            // ── Pull event states ONCE per frame (not per building) ──
+            const now    = Date.now();
+            const strike = window.EventsEngine?.getActiveStrike?.() || null;
+            const locust = window.EventsEngine?.getActiveLocust?.() || null;
+
+            // Build a Set of locust-affected farm keys for O(1) lookup
+            let locustSet = null;
+            if (locust?.affectedFarms?.length) {
+                locustSet = new Set(locust.affectedFarms.map(f => f.col + ',' + f.row));
+            }
+
+            const selectedCell = window.GameState?.selectedCell;
+            const factionColor = HM.factionColor;
+            const isWorkMode   = this.mapMode === 'work';
+
+            // ── Render visible hexes ───────────────────────
+            for (let r = firstRow; r <= lastRow; r++) {
+                const rowData = HM.data[r];
+                const isOddRow = (r % 2 === 1);
+                const baseY    = r * yOff + camY;
+
                 for (let c = 0; c < HM.cols; c++) {
-                    this.drawHex(c, r, HM.data[r][c]);
+                    // Column culling
+                    let bx = c * w + camX;
+                    if (isOddRow) bx += w / 2;
+                    if (bx + w < visX0 || bx > visX1) continue;
+                    if (baseY + h < visY0 || baseY > visY1) continue;
+
+                    const cx = bx + w / 2;
+                    const cy = baseY + h / 2;
+
+                    this.drawHex(ctx, c, r, rowData[c], cx, cy, s, w, h,
+                        factionColor, isWorkMode, now, strike, locustSet, selectedCell);
                 }
             }
         },
 
-        drawHex: function(col, row, tile) {
-            const ctx = this.ctx;
-            const pos = HM.hexToPixel(col, row);
-            const w = HM.hexWidth();
-            const h = HM.hexHeight();
-            const cx = pos.x + w / 2;
-            const cy = pos.y + h / 2;
-            const s = HM.hexSize();
+        // ── Draw a single hex ────────────────────────────────
+        drawHex: function(ctx, col, row, tile, cx, cy, s, w, h,
+                          factionColor, isWorkMode, now, strike, locustSet, selectedCell) {
 
-            const verts = [];
-            for (let i = 0; i < 6; i++) {
-                const angle = (Math.PI / 3) * i - Math.PI / 6;
-                verts.push({ x: cx + s * Math.cos(angle), y: cy + s * Math.sin(angle) });
-            }
+            const key      = col + ',' + row;
+            const terr     = HM.territory[key];
+            const building = HM.buildings[key];
 
-            ctx.beginPath();
-            ctx.moveTo(verts[0].x, verts[0].y);
-            for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
-            ctx.closePath();
+            // Get (cached) vertices
+            const v = this._getVerts(col, row, s);
 
-            ctx.fillStyle = C.TILES[tile.type].color;
+            // ── 1. Base tile fill ──────────────────────────
+            ctx.fillStyle = _tileColors[tile.type] || '#1a3352';
+            this._hexPath(ctx, v, cx, cy);
             ctx.fill();
 
-            // Territory tint
-            const key = col + ',' + row;
-            const terr = HM.territory[key];
-            if (terr) {
-                ctx.save();
-                ctx.globalAlpha = 0.15;
-                ctx.fillStyle = HM.factionColor;
-                ctx.beginPath();
-                ctx.moveTo(verts[0].x, verts[0].y);
-                for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
-                ctx.closePath();
+            // ── 2. Territory tint (faction color) ──────────
+            if (terr || (building && building.type === 'townhall')) {
+                ctx.globalAlpha = terr ? 0.15 : 0.10;
+                ctx.fillStyle = factionColor;
+                this._hexPath(ctx, v, cx, cy);
                 ctx.fill();
-                ctx.restore();
+                ctx.globalAlpha = 1;
             }
 
-            // Also tint townhall tile itself
-            const keyBuilding = HM.buildings[key];
-            if (keyBuilding && keyBuilding.type === 'townhall') {
-                ctx.save();
-                ctx.globalAlpha = 0.10;
-                ctx.fillStyle = HM.factionColor;
-                ctx.beginPath();
-                ctx.moveTo(verts[0].x, verts[0].y);
-                for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-            }
-
-            // ═══ WORK MODE: Idle building hex background tint ═══
-            if (this.mapMode === 'work' && keyBuilding) {
-                const cfg = C.BUILDINGS[keyBuilding.type];
-                if (cfg && cfg.workersRequired) {
-                    const assigned = keyBuilding.assignedWorkers || 0;
-                    const isStrike = window.EventsEngine && window.EventsEngine.getActiveStrike &&
-                        (() => {
-                            const strike = window.EventsEngine.getActiveStrike();
-                            return strike && strike.targetCol === col && strike.targetRow === row;
-                        })();
-                    if (assigned < cfg.workersRequired && !isStrike) {
-                        // Dark red warning tint on the entire hex
-                        ctx.save();
+            // ── 3. Work mode: idle building hex tint ───────
+            if (isWorkMode && building) {
+                const cfg = C.BUILDINGS[building.type];
+                if (cfg?.workersRequired) {
+                    const assigned = building.assignedWorkers || 0;
+                    const isStruck = strike && strike.targetCol === col && strike.targetRow === row;
+                    if (assigned < cfg.workersRequired && !isStruck) {
+                        // Dark red tint
                         ctx.globalAlpha = 0.18;
                         ctx.fillStyle = '#ef4444';
-                        ctx.beginPath();
-                        ctx.moveTo(verts[0].x, verts[0].y);
-                        for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
-                        ctx.closePath();
+                        this._hexPath(ctx, v, cx, cy);
                         ctx.fill();
-                        ctx.restore();
+                        ctx.globalAlpha = 1;
 
-                        // Pulsing red border
-                        const pulse = (Math.sin(Date.now() / 500) + 1) / 2;
-                        ctx.save();
-                        ctx.strokeStyle = `rgba(239, 68, 68, ${0.4 + pulse * 0.4})`;
+                        // Pulsing border
+                        const pulse = (Math.sin(now / 500) + 1) / 2;
+                        ctx.strokeStyle = `rgba(239,68,68,${0.4 + pulse * 0.4})`;
                         ctx.lineWidth = 2.5 * HM.zoom;
-                        ctx.beginPath();
-                        ctx.moveTo(verts[0].x, verts[0].y);
-                        for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
-                        ctx.closePath();
+                        this._hexPath(ctx, v, cx, cy);
                         ctx.stroke();
-                        ctx.restore();
                     }
                 }
             }
 
-            // Grid stroke
+            // ── 4. Grid stroke ─────────────────────────────
             ctx.strokeStyle = 'rgba(0,0,0,0.35)';
             ctx.lineWidth = 1 * HM.zoom;
-            ctx.beginPath();
-            ctx.moveTo(verts[0].x, verts[0].y);
-            for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
-            ctx.closePath();
+            this._hexPath(ctx, v, cx, cy);
             ctx.stroke();
 
-            // Territory border edges
+            // ── 5. Territory border edges ──────────────────
             if (terr) {
-                ctx.strokeStyle = HM.factionColor;
-                ctx.lineWidth = 2.5 * HM.zoom;
-                ctx.lineCap = 'round';
+                const isOdd = (row % 2 === 1);
+                const evenDirs = [[+1,0],[0,+1],[-1,+1],[-1,0],[-1,-1],[0,-1]];
+                const oddDirs  = [[+1,0],[+1,+1],[0,+1],[-1,0],[0,-1],[+1,-1]];
+                const dirs = isOdd ? oddDirs : evenDirs;
+
+                ctx.strokeStyle = factionColor;
+                ctx.lineWidth   = 2.5 * HM.zoom;
+                ctx.lineCap     = 'round';
                 for (let i = 0; i < 6; i++) {
-                    if (HM.isBorderEdge(col, row, i)) {
+                    const d = dirs[i];
+                    const nc = col + d[0], nr = row + d[1];
+                    if (nr < 0 || nr >= HM.rows || nc < 0 || nc >= HM.cols) continue;
+                    const nKey  = nc + ',' + nr;
+                    const nTerr = HM.territory[nKey];
+                    const nBuilding = HM.buildings[nKey];
+                    const isBorder  = (!nTerr && !nBuilding) ||
+                        (nBuilding?.type === 'townhall' && nBuilding.name !== terr.owner) ||
+                        (nTerr && nTerr.owner !== terr.owner);
+                    if (isBorder) {
                         ctx.beginPath();
-                        ctx.moveTo(verts[i].x, verts[i].y);
-                        ctx.lineTo(verts[(i + 1) % 6].x, verts[(i + 1) % 6].y);
+                        ctx.moveTo(v[i][0] + cx, v[i][1] + cy);
+                        ctx.lineTo(v[(i + 1) % 6][0] + cx, v[(i + 1) % 6][1] + cy);
                         ctx.stroke();
                     }
                 }
             }
 
-            // Completed building
-            const building = HM.buildings[key];
+            // ── 6. Completed building ──────────────────────
             if (building) {
-                this.drawBuilding(ctx, cx, cy, s, building.type, col, row);
+                this.drawBuilding(ctx, cx, cy, s, building.type, col, row, building,
+                    now, isWorkMode, strike, locustSet);
             }
 
-            // Under construction (pulsing)
+            // ── 7. Under-construction pulse ────────────────
             const inQueue = HM.buildQueue.find(q => q.col === col && q.row === row);
             if (inQueue) {
-                const pulse = (Math.sin(Date.now() / 300) + 1) / 2;
+                const pulse = (Math.sin(now / 300) + 1) / 2;
                 ctx.beginPath();
                 ctx.arc(cx, cy, s * 0.25 + pulse * s * 0.1, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(244, 185, 66, ' + (0.3 + pulse * 0.35) + ')';
+                ctx.fillStyle = 'rgba(244,185,66,' + (0.3 + pulse * 0.35) + ')';
                 ctx.fill();
-                ctx.font = (s * 0.4) + 'px serif';
+
+                ctx.font = (s * 0.38) + 'px serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('🔨', cx, cy);
+                ctx.fillText('🔨', cx, cy - s * 0.1);
+
+                ctx.font = 'bold ' + (s * 0.22) + 'px sans-serif';
+                ctx.fillStyle = '#f4b942';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 3;
+                ctx.fillText(inQueue.turnsRemaining, cx, cy + s * 0.27);
+                ctx.shadowBlur = 0;
             }
 
-            // Selected highlight
-            if (window.GameState && window.GameState.selectedCell &&
-                window.GameState.selectedCell.col === col &&
-                window.GameState.selectedCell.row === row) {
-                ctx.beginPath();
-                ctx.moveTo(verts[0].x, verts[0].y);
-                for (let i = 1; i < 6; i++) ctx.lineTo(verts[i].x, verts[i].y);
-                ctx.closePath();
+            // ── 8. Selected highlight ──────────────────────
+            if (selectedCell && selectedCell.col === col && selectedCell.row === row) {
                 ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-                ctx.lineWidth = 2.5 * HM.zoom;
+                ctx.lineWidth   = 2.5 * HM.zoom;
+                this._hexPath(ctx, v, cx, cy);
                 ctx.stroke();
             }
         },
 
-        drawBuilding: function(ctx, cx, cy, s, type, col, row) {
+        // ── Draw building on top of hex ──────────────────────
+        drawBuilding: function(ctx, cx, cy, s, type, col, row, building,
+                               now, isWorkMode, strike, locustSet) {
             const style = BUILDING_STYLES[type] || BUILDING_STYLES.townhall;
-            const cfg = window.GameConfig.BUILDINGS[type];
+            const cfg   = C.BUILDINGS[type];
 
+            // Circle background
             ctx.beginPath();
             ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
-            ctx.fillStyle = style.fill;
+            ctx.fillStyle  = style.fill;
             ctx.fill();
             ctx.strokeStyle = style.stroke;
-            ctx.lineWidth = 1.5 * HM.zoom;
+            ctx.lineWidth   = 1.5 * HM.zoom;
             ctx.stroke();
 
-            // Draw building icon first
+            // Building icon
             if (cfg) {
                 ctx.font = (s * 0.38) + 'px serif';
-                ctx.textAlign = 'center';
+                ctx.textAlign    = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(cfg.icon, cx, cy);
             }
 
-            // Level indicator for upgraded buildings
-            if (col !== undefined && row !== undefined) {
-                const b = HM.buildings[col + ',' + row];
-                if (b && b.level && b.level > 1) {
-                    ctx.save();
-                    ctx.font = (s * 0.22) + 'px serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillStyle = '#f4b942';
-                    ctx.shadowColor = 'rgba(0,0,0,0.7)';
-                    ctx.shadowBlur = 3;
-                    ctx.fillText('⭐', cx + s * 0.28, cy - s * 0.28);
-                    ctx.restore();
-                }
+            // Level star ⭐ (top-right)
+            const hasLevel = building.level && building.level > 1;
+            if (hasLevel) {
+                ctx.font = (s * 0.22) + 'px serif';
+                ctx.fillStyle   = '#f4b942';
+                ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                ctx.shadowBlur  = 3;
+                ctx.fillText('⭐', cx + s * 0.28, cy - s * 0.28);
+                ctx.shadowBlur  = 0;
             }
 
-            // Mine mode indicator
-            if (type === 'mine' && col !== undefined && row !== undefined) {
-                const b = HM.buildings[col + ',' + row];
-                if (b) {
-                    const mode = b.mineMode || 'gold';
-                    const modeColors = { gold: '#f4b942', iron: '#94a3b8', copper: '#b45309' };
+            // Mine mode indicator dot (top-left if upgraded, top-right otherwise)
+            if (type === 'mine') {
+                const mode = building.mineMode || 'gold';
+                const modeColors = { gold: '#f4b942', iron: '#94a3b8', copper: '#b45309', coal: '#374151' };
+                const dotX = hasLevel ? cx - s * 0.25 : cx + s * 0.25;
+                ctx.beginPath();
+                ctx.arc(dotX, cy - s * 0.25, s * 0.12, 0, Math.PI * 2);
+                ctx.fillStyle   = modeColors[mode] || '#f4b942';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                ctx.lineWidth   = 1 * HM.zoom;
+                ctx.stroke();
+            }
+
+            // ── Work mode idle warning ─────────────────────
+            if (isWorkMode && cfg?.workersRequired) {
+                const assigned = building.assignedWorkers || 0;
+                const isStruck = strike && strike.targetCol === col && strike.targetRow === row;
+                if (assigned < cfg.workersRequired && !isStruck) {
+                    const pulse = (Math.sin(now / 400) + 1) / 2;
+                    ctx.globalAlpha = 0.3 + pulse * 0.2;
+                    ctx.fillStyle = '#ef4444';
                     ctx.beginPath();
-                    ctx.arc(cx + s * 0.25, cy - s * 0.25, s * 0.12, 0, Math.PI * 2);
-                    ctx.fillStyle = modeColors[mode] || '#f4b942';
+                    ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-                    ctx.lineWidth = 1 * HM.zoom;
+                    ctx.globalAlpha = 1;
+
+                    ctx.font = (s * 0.35) + 'px serif';
+                    ctx.fillStyle   = '#fca5a5';
+                    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                    ctx.shadowBlur  = 4;
+                    ctx.fillText('⚠️', cx, cy - s * 0.35);
+
+                    ctx.font = (s * 0.22) + 'px sans-serif';
+                    ctx.shadowBlur = 0;
+                    ctx.fillText(`${assigned}/${cfg.workersRequired}`, cx, cy + s * 0.35);
+
+                    ctx.strokeStyle = `rgba(239,68,68,${0.5 + pulse * 0.3})`;
+                    ctx.lineWidth   = 2 * HM.zoom;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, s * (style.radius + 0.06 + pulse * 0.04), 0, Math.PI * 2);
                     ctx.stroke();
                 }
             }
 
-            // ═══ WORK MODE: Idle building warning overlay ═══
-            if (this.mapMode === 'work' && col !== undefined && row !== undefined) {
-                const b = HM.buildings[col + ',' + row];
-                if (b && cfg && cfg.workersRequired) {
-                    const assigned = b.assignedWorkers || 0;
-                    const isStrike = window.EventsEngine && window.EventsEngine.getActiveStrike &&
-                        (() => {
-                            const strike = window.EventsEngine.getActiveStrike();
-                            return strike && strike.targetCol === col && strike.targetRow === row;
-                        })();
+            // ── Strike overlay ─────────────────────────────
+            if (strike && strike.targetCol === col && strike.targetRow === row) {
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
 
-                    if (assigned < cfg.workersRequired && !isStrike) {
-                        // Warning circle overlay
-                        const pulse = (Math.sin(Date.now() / 400) + 1) / 2;
-                        ctx.save();
-                        ctx.globalAlpha = 0.3 + pulse * 0.2;
-                        ctx.fillStyle = '#ef4444';
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.restore();
-
-                        // Warning icon
-                        ctx.save();
-                        ctx.font = (s * 0.35) + 'px serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillStyle = '#fca5a5';
-                        ctx.shadowColor = 'rgba(0,0,0,0.7)';
-                        ctx.shadowBlur = 4;
-                        ctx.fillText('⚠️', cx, cy - s * 0.35);
-                        ctx.restore();
-
-                        // Worker shortage text
-                        ctx.save();
-                        ctx.font = (s * 0.22) + 'px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillStyle = '#fca5a5';
-                        ctx.fillText(`${assigned}/${cfg.workersRequired}`, cx, cy + s * 0.35);
-                        ctx.restore();
-
-                        // Red exclamation ring
-                        ctx.save();
-                        ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 + pulse * 0.3})`;
-                        ctx.lineWidth = 2 * HM.zoom;
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, s * (style.radius + 0.06 + pulse * 0.04), 0, Math.PI * 2);
-                        ctx.stroke();
-                        ctx.restore();
-                    }
-                }
+                ctx.font = (s * 0.42) + 'px serif';
+                ctx.fillStyle   = '#fbbf24';
+                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur  = 4;
+                ctx.fillText('✊', cx, cy);
+                ctx.shadowBlur  = 0;
             }
 
-            // Strike overlay — drawn ON TOP of the building icon
-            if (col !== undefined && row !== undefined && window.EventsEngine) {
-                const strike = window.EventsEngine.getActiveStrike();
-                if (strike && strike.targetCol === col && strike.targetRow === row) {
-                    ctx.save();
-                    ctx.globalAlpha = 0.35;
-                    ctx.fillStyle = '#fbbf24';
+            // ── Locust overlay ─────────────────────────────
+            if (locustSet) {
+                const key = col + ',' + row;
+                if (locustSet.has(key)) {
+                    const pulse = (Math.sin(now / 400) + 1) / 2;
+                    ctx.globalAlpha = 0.25 + pulse * 0.15;
+                    ctx.fillStyle = '#2d1f0f';
                     ctx.beginPath();
                     ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.restore();
+                    ctx.globalAlpha = 1;
 
-                    ctx.save();
-                    ctx.font = (s * 0.42) + 'px serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-                    ctx.shadowBlur = 4;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 1;
-                    ctx.fillText('✊', cx, cy);
-                    ctx.restore();
-                }
-            }
+                    ctx.font = (s * 0.40) + 'px serif';
+                    ctx.fillStyle   = '#a16207';
+                    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                    ctx.shadowBlur  = 5;
+                    ctx.fillText('🦗', cx, cy - s * 0.05);
+                    ctx.shadowBlur  = 0;
 
-            // Locust overlay — drawn ON TOP of farm cells
-            if (col !== undefined && row !== undefined && window.EventsEngine) {
-                const locust = window.EventsEngine.getActiveLocust();
-                if (locust && locust.affectedFarms) {
-                    const isAffected = locust.affectedFarms.some(f => f.col === col && f.row === row);
-                    if (isAffected) {
-                        const pulse = (Math.sin(Date.now() / 400) + 1) / 2;
-                        ctx.save();
-                        ctx.globalAlpha = 0.25 + pulse * 0.15;
-                        ctx.fillStyle = '#2d1f0f';
+                    // Orbiting bug dots
+                    const time = now / 300;
+                    ctx.fillStyle = '#713f12';
+                    for (let i = 0; i < 5; i++) {
+                        const angle = time + (i * Math.PI * 2 / 5);
+                        const dist  = s * 0.15 + Math.sin(time * 2 + i) * s * 0.05;
                         ctx.beginPath();
-                        ctx.arc(cx, cy, s * style.radius, 0, Math.PI * 2);
+                        ctx.arc(cx + Math.cos(angle) * dist,
+                                cy + Math.sin(angle) * dist + s * 0.05,
+                                s * 0.04, 0, Math.PI * 2);
                         ctx.fill();
-                        ctx.restore();
-
-                        ctx.save();
-                        ctx.font = (s * 0.40) + 'px serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillStyle = '#a16207';
-                        ctx.shadowColor = 'rgba(0,0,0,0.7)';
-                        ctx.shadowBlur = 5;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 1;
-                        ctx.fillText('🦗', cx, cy - s * 0.05);
-                        ctx.restore();
-
-                        ctx.save();
-                        ctx.fillStyle = '#713f12';
-                        const time = Date.now() / 300;
-                        for (let i = 0; i < 5; i++) {
-                            const angle = time + (i * Math.PI * 2 / 5);
-                            const dist = s * 0.15 + Math.sin(time * 2 + i) * s * 0.05;
-                            const dx = cx + Math.cos(angle) * dist;
-                            const dy = cy + Math.sin(angle) * dist + s * 0.05;
-                            ctx.beginPath();
-                            ctx.arc(dx, dy, s * 0.04, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
-                        ctx.restore();
                     }
                 }
             }
