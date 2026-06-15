@@ -59,7 +59,10 @@
                     // Game state
                     currentTurn: GS.currentTurn,
                     autoWork: GS.autoWork,
-                    lastBuildType: GS.lastBuildType
+                    lastBuildType: GS.lastBuildType,
+
+                    // Difficulty
+                    difficulty: HM.difficulty || 'normal'
                 };
 
                 localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -121,6 +124,9 @@
                 HM.territory       = data.territory       || {};
                 HM.citizens        = data.citizens        || [];
                 HM._nextCitizenId  = data._nextCitizenId  || 1;
+
+                // Difficulty
+                HM.difficulty = data.difficulty || 'normal';
 
                 // Clear transient event state
                 HM.lastEvents          = [];

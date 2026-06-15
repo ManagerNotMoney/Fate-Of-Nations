@@ -414,9 +414,9 @@
          */
         isTerrainCompatible: function(buildingType, tileType) {
             const cfg = C.BUILDINGS[buildingType];
-            if (!cfg) return false;
+            if (!cfg || !tileType) return false;
             if (cfg.forbiddenTiles && cfg.forbiddenTiles.includes(tileType)) return false;
-            if (!cfg.allowedTiles.includes(tileType)) return false;
+            if (!cfg.allowedTiles || !cfg.allowedTiles.includes(tileType)) return false;
             return true;
         },
 
@@ -440,6 +440,7 @@
                 if (tile.type === 'mountain') return { ok: false, reason: 'Нельзя строить в горах' };
                 if (buildingType === 'farm')    return { ok: false, reason: 'Ферму можно строить только на плодородной почве 🌱' };
                 if (buildingType === 'orchard') return { ok: false, reason: 'Сад нельзя строить на песке 🌿' };
+                if (buildingType === 'cherry_orchard') return { ok: false, reason: 'Сад нельзя строить на песке 🌿' };
                 if (buildingType === 'mine')    return { ok: false, reason: 'Шахту можно строить только в горах ⛰️' };
                 if (buildingType === 'port')    return { ok: false, reason: 'Порт можно строить только на песке 🏖️' };
                 return { ok: false, reason: 'Нельзя строить здесь' };
@@ -636,7 +637,7 @@
                 money: C.BASE_INCOME,
                 wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0,
                 coal: 0, steel: 0, wood: 0,
-                population: 0, defense: 0
+                population: 0, defense: 0,cherry:0
             };
             const events = [];
             const buildings = Object.values(hexMap.buildings)
@@ -767,7 +768,15 @@
                     }
                     continue;
                 }
-
+                if (b.type === 'cherry_orchard') {
+                    const assigned = b.assignedWorkers || 0;
+                    if (assigned >= cfg.workersRequired) {
+                        d.cherry += 2 * assigned;
+                    } else {
+                        idleBuildings++;
+                    }
+                    continue;
+                }
                 if (cfg.workersRequired) {
                     if ((b.assignedWorkers || 0) >= cfg.workersRequired) {
                         // Skip mine - handled separately with mode switching
@@ -843,29 +852,38 @@
             // ── Food consumption ──────────────────────────────
             const pop = hexMap.resources.population;
             const applesAvail = Math.max(0, hexMap.resources.apples + d.apples);
+            const cherryAvail = Math.max(0, hexMap.resources.cherry + d.cherry);
             const fishAvail   = Math.max(0, hexMap.resources.fish   + d.fish);
             const breadAvail  = Math.max(0, hexMap.resources.bread  + d.bread);
-            const directFood  = applesAvail + fishAvail;
+            const directFood  = applesAvail + fishAvail + cherryAvail;
             const totalFoodCap = directFood + breadAvail * C.FOOD_PER_POPULATION;
 
             if (pop > 0 && totalFoodCap < pop) {
-                // Starvation
+                // Голодание
                 const fedByDirect = Math.min(directFood, pop);
                 const fedByBread  = Math.min(breadAvail * C.FOOD_PER_POPULATION, Math.max(0, pop - fedByDirect));
                 d.population -= Math.min(pop - (fedByDirect + fedByBread), pop);
-
                 const applesUsed = Math.min(applesAvail, pop);
                 d.apples -= applesUsed;
-                const afterApples = Math.max(0, pop - applesUsed);
-                const fishUsed = Math.min(fishAvail, afterApples);
+                let remaining = pop - applesUsed;
+                const cherryUsed = Math.min(cherryAvail, remaining);
+                d.cherry -= cherryUsed;
+                remaining -= cherryUsed;
+                const fishUsed = Math.min(fishAvail, remaining);
                 d.fish -= fishUsed;
-                d.bread -= Math.min(breadAvail, Math.ceil(Math.max(0, afterApples - fishUsed) / C.FOOD_PER_POPULATION));
+                remaining -= fishUsed;
+                if (remaining > 0) {
+                    d.bread -= Math.min(Math.ceil(remaining / C.FOOD_PER_POPULATION), breadAvail);
+                }
                 events.push({ type: 'starvation', shortage: pop - (fedByDirect + fedByBread) });
             } else if (pop > 0) {
                 // Normal feeding — deplete food stores
                 const applesUsed = Math.min(applesAvail, pop);
                 d.apples -= applesUsed;
                 let remaining = pop - applesUsed;
+                const cherryUsed = Math.min(cherryAvail,remaining);
+                d.cherry -= cherryUsed;
+                remaining -= cherryUsed
                 const fishUsed = Math.min(fishAvail, remaining);
                 d.fish -= fishUsed;
                 remaining -= fishUsed;
@@ -943,7 +961,7 @@
             // ── Resource caps (150 base + 150 per warehouse) ──
             const warehouseCount = Object.values(hexMap.buildings).filter(b => b.type === 'warehouse').length;
             const maxStorage = 150 + warehouseCount * 150;
-            const cappedResources = ['wheat', 'bread', 'apples', 'fish', 'iron', 'copper', 'coal', 'steel', 'wood'];
+            const cappedResources = ['wheat','cherry', 'bread', 'apples', 'fish', 'iron', 'copper', 'coal', 'steel', 'wood'];
             for (const res of cappedResources) {
                 hexMap.resources[res] = Math.min(hexMap.resources[res] || 0, maxStorage);
             }
@@ -963,6 +981,7 @@
                 mine:        'communist',
                 factory:     'communist',
                 smelter:     'communist',
+                cherry_orchard:     'communist',
                 orchard:     'liberal',
                 port:        'liberal',
                 townhall:    'militarist',

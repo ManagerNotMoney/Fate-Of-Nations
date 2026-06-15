@@ -230,7 +230,7 @@
                         const lostBread = hm.resources.bread;
                         hm.resources.money = 0;
                         hm.resources.bread = 0;
-                        return { message: `Защиты не хватило — разграблено ${lostMoney} 💰 и ${lostBread} 🍞! Постройте казармы.`, duration: 6000 };
+                        return { message: `Наша оборона не справилась с набегом — разграблено ${lostMoney} 💰 и украдено ${lostBread} 🍞! Постройте казармы.`, duration: 6000 };
                     } else {
                         const spent = hm.resources.defense;
                         hm.resources.defense = 0;
@@ -249,7 +249,7 @@
                     const farms = Object.values(hm.buildings).filter(b => b.type === 'farm' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
                     const bonus = farms.length * 5;
                     hm.resources.wheat += bonus;
-                    return { message: `Каждая из ${farms.length} работающих ферм дала щедрый урожай. Итого: +${bonus} 🌾`, duration: 4500 };
+                    return { message: `Каждая из ${farms.length} наших ферм дала щедрый урожай! Итого: +${bonus} 🌾`, duration: 4500 };
                 }
             },
 
@@ -264,7 +264,7 @@
                     const pct   = 0.15 + Math.random() * 0.05;
                     const bonus = Math.floor(hm.resources.money * pct);
                     hm.resources.money += bonus;
-                    return { message: `${ports.length} работающий(е) порт(а) поймали удачный ветер — дополнительно ${bonus} 💰 (+${Math.round(pct * 100)}%).`, duration: 5000 };
+                    return { message: `${ports.length} наш порт поймал удачный ветер и был найден ценный клад — дополнительно ${bonus} 💰 (+${Math.round(pct * 100)}%).`, duration: 5000 };
                 }
             },
 
@@ -293,10 +293,23 @@
                     const bonusPer = 3 + Math.floor(Math.random() * 3);
                     const total    = orchards.length * bonusPer;
                     hm.resources.apples += total;
-                    return { message: `Каждый работающий сад дал +${bonusPer} яблок. Итого: +${total} 🍎`, duration: 4500 };
+                    return { message: `Каждый яблоневый сад дал +${bonusPer} яблок. Итого: +${total} 🍎`, duration: 4500 };
                 }
             },
-
+            // ── 8. ВИШНЁВЫЙ БУМ ──────────────────────────
+            {
+                id: 'cherry_boom', name: 'Вишнёвый Бум!', icon: '🍒', scope: 'world',
+                condition: function(hm) {
+                    return Object.values(hm.buildings).some(b => b.type === 'cherry_orchard' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
+                },
+                apply: function(hm) {
+                    const cherry_orchards = Object.values(hm.buildings).filter(b => b.type === 'cherry_orchard' && window.EconomyEngine.isBuildingActive(hm, b.col, b.row));
+                    const bonusPer = 3 + Math.floor(Math.random() * 3);
+                    const total    = cherry_orchards.length * bonusPer;
+                    hm.resources.cherry += total;
+                    return { message: `Вишнёвый сезон! Каждый вишнёвый сад дал +${bonusPer} вишни. Итого: +${total} 🍒`, duration: 4500 };
+                }
+            },
             // ══════════════════════════════════════════════
             //  ЛОКАЛЬНЫЕ СОБЫТИЯ (scope: 'local')
             //  ПРАВИЛО: необратимый эффект применяется СРАЗУ в apply().
@@ -304,7 +317,7 @@
             //  onClose — вызывается при закрытии без выбора.
             // ══════════════════════════════════════════════
 
-            // ── 8. КОРРУПЦИЯ (переработанный) ─────────────
+            // ── 1. КОРРУПЦИЯ ─────────────
             {
                 id: 'corruption', name: 'Коррупция', icon: '🕵️', scope: 'local',
                 condition: function(hm) { return Object.values(hm.buildings).some(b => b.type === 'local_admin'); },
@@ -320,7 +333,7 @@
                     hm.resources.money = Math.max(0, hm.resources.money - stolen);
 
                     return {
-                        message: `В администрации [${col}, ${row}] разгорелся коррупционный скандал! Чиновники похитили ${stolen} 💰 (${Math.round(pct * 100)}%).`,
+                        message: `В администрации [${col}, ${row}] разгорелся коррупционный скандал! Чиновник похитил ${stolen} 💰 (${Math.round(pct * 100)}%).`,
                         targetCol: col,
                         targetRow: row,
                         choices: [
@@ -333,14 +346,14 @@
                                     }
                                     hm.resources.defense -= 30;
                                     hm.resources.money += stolen;
-                                    return { message: `Чиновник посажен! Возвращено ${stolen} 💰. Потрачено 30 🛡️.`, ok: true };
+                                    return { message: `Чиновник допрошен и посажен! Он вернул ${stolen} 💰. Потрачено 30 🛡️.`, ok: true };
                                 }
                             },
                             {
                                 label: 'Принять потерю',
                                 icon: '😔',
                                 apply: function(hm) {
-                                    return { message: `Коррупционный скандал замяли. ${stolen} 💰 потеряны навсегда.`, ok: true };
+                                    return { message: `Коррупционный скандал замяли. ${stolen} 💰 были украдены и потрачены чиновником.`, ok: true };
                                 }
                             }
                         ]
@@ -348,7 +361,7 @@
                 }
             },
 
-            // ── 9. ПОЖАР ─────────────────────────────────
+            // ── 2. ПОЖАР ─────────────────────────────────
             {
                 id: 'fire', name: 'Пожар', icon: '🔥', scope: 'local',
                 condition: function(hm) {
@@ -400,7 +413,7 @@
                 }
             },
 
-            // ── 10. НЕСЧАСТНЫЙ СЛУЧАЙ ────────────────────
+            // ── 3. НЕСЧАСТНЫЙ СЛУЧАЙ ────────────────────
             {
                 id: 'accident', name: 'Несчастный случай', icon: '💀', scope: 'local',
                 condition: function(hm) {
@@ -413,9 +426,13 @@
                     const name   = cfg ? cfg.icon + ' ' + cfg.name : target.type;
                     const col    = target.col;
                     const row    = target.row;
-
                     target.assignedWorkers = Math.max(0, (target.assignedWorkers || 1) - 1);
                     hm.resources.population = Math.max(0, hm.resources.population - 1);
+                    hm._lastAccident = {
+                        col: col,
+                        row: row,
+                        turn: window.GameState?.currentTurn || 0
+                    };
 
                     return {
                         message:   `Работник в «${name}» [${col}, ${row}] получил тяжёлую травму и может скончаться.`,
@@ -447,7 +464,7 @@
                 }
             },
 
-            // ── 11. ЗАБАСТОВКА ───────────────────────────
+            // ── 4. ЗАБАСТОВКА ───────────────────────────
             {
                 id: 'strike', name: 'Забастовка!', icon: '✊', scope: 'local',
                 condition: function(hm) {
@@ -474,12 +491,12 @@
                     };
 
                     return {
-                        message:   `Рабочие «${name}» [${col}, ${row}] объявили забастовку! Здание простаивает ${duration} ходов.`,
+                        message:   `Рабочие «${name}» [${col}, ${row}] недовольны и объявили забастовку! Забастовка будет длится ${duration} ходов.`,
                         targetCol: col,
                         targetRow: row,
                         choices: [
                             {
-                                label: 'Выдать премии (−300 💰)',
+                                label: 'Выдать премии рабочим (−300 💰)',
                                 icon:  '💸',
                                 apply: function(hm) {
                                     if (hm.resources.money < 300) {
@@ -487,7 +504,7 @@
                                     }
                                     hm.resources.money -= 300;
                                     _endStrike();
-                                    return { message: `Премии выплачены — рабочие «${name}» вернулись к работе.`, ok: true };
+                                    return { message: `Премии выплачены — рабочие «${name}» успокоились вернулись к работе.`, ok: true };
                                 }
                             },
                             {
@@ -499,7 +516,7 @@
                                     }
                                     hm.resources.defense -= 100;
                                     _endStrike();
-                                    return { message: `Забастовка подавлена силой. «${name}» возобновляет работу. −100 🛡️.`, ok: true };
+                                    return { message: `Забастовка подавлена силой. «${name}» после короткого сопротивления возобновляет работу. −100 🛡️.`, ok: true };
                                 }
                             },
                             {
@@ -514,7 +531,7 @@
                 }
             },
 
-            // ── 12. САРАНЧА ───────────────────────────────
+            // ── 5. САРАНЧА ───────────────────────────────
             {
                 id: 'locust', name: 'Нашествие саранчи', icon: '🦗', scope: 'local',
                 condition: function(hm) {
@@ -567,7 +584,7 @@
                 }
             },
 
-            // ── 13. ОБВАЛ ─────────────────────────────────
+            // ── 6. ОБВАЛ ─────────────────────────────────
             {
                 id: 'landslide', name: 'Обвал в шахте', icon: '⛰️', scope: 'local',
                 condition: function(hm) {
@@ -587,16 +604,16 @@
                     hm.recalculateTerritory();
 
                     return {
-                        message: `Тревожный гул под землёй… В шахте [${col}, ${row}] начинается обвал! Каменные плиты обрушиваются на галереи. Шахта разрушена!`,
+                        message: `Тревожный гул под землёй… В шахте [${col}, ${row}] начинается обвал! Каменные плиты обрушиваются на галереи. Шахта может быть разрушена!`,
                         targetCol: col,
                         targetRow: row,
                         choices: [
                             {
-                                label: 'Укрепить стены (−100 💰, восстановить шахту)',
+                                label: 'Укрепить шахту (−100 💰)',
                                 icon: '🏗️',
                                 apply: function(hm) {
                                     if (hm.resources.money < 100) {
-                                        return { message: 'Не хватает 100 💰 для укрепления. Шахта остаётся разрушенной.', ok: false };
+                                        return { message: 'Не хватает 100 💰 для укрепления. Шахта обваливатся.', ok: false };
                                     }
                                     hm.resources.money -= 100;
                                     hm.buildings[col + ',' + row] = snapshot;
@@ -608,7 +625,7 @@
                                 label: 'Принять потерю',
                                 icon: '💀',
                                 apply: function(hm) {
-                                    return { message: `Шахта [${col}, ${row}] засыпана обломками. Галереи навсегда утеряны.`, ok: true };
+                                    return { message: `Шахта [${col}, ${row}] засыпана обломками. Шахта разрушена.`, ok: true };
                                 }
                             }
                         ]
@@ -616,7 +633,7 @@
                 }
             },
 
-            // ── 14. ДОЛОЙ БУРЖУАЗИЮ! ───────────────────────
+            // ── 7. ДОЛОЙ БУРЖУАЗИЮ! ───────────────────────
             {
                 id: 'down_with_bourgeoisie', name: 'Долой буржуазию!', icon: '🚩', scope: 'local',
                 condition: function(hm) {
@@ -626,7 +643,7 @@
                     if (communistCount === 0) return false;
                     if (communistCount < hm.resources.population * 0.5) return false;
 
-                    const income = (hm.deltas && hm.deltas.money) || 0;
+                    const income = (hm.deltas && typeof hm.deltas.money === 'number') ? hm.deltas.money : 0;
                     if (income <= 0) return false;
                     return hm.resources.money >= income * 60;
                 },
@@ -636,7 +653,7 @@
                     const communistCount = communistBuildings.reduce((s, b) => s + (b.assignedWorkers || 0), 0);
 
                     return {
-                        message: `Рабочие шахт и заводов (${communistCount} чел.) недовольны накопленным богатством казны и требуют перемен!`,
+                        message: `Рабочие (${communistCount} чел.) недовольны накопленным богатством казны и требуют перемен!`,
                         choices: [
                             {
                                 label: `За равноправие! (разделить казну на ${communistCount})`,
@@ -657,7 +674,7 @@
                                         return { message: `Не хватает ${cost} 🛡️ для подавления восстания!`, ok: false };
                                     }
                                     hm.resources.defense -= cost;
-                                    return { message: `Восстание подавлено силой. Потрачено ${cost} 🛡️.`, ok: true };
+                                    return { message: `Восстание рабочих подавлено силой. Потрачено ${cost} 🛡️.`, ok: true };
                                 }
                             },
                             {

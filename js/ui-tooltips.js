@@ -133,7 +133,7 @@
             const pop = Math.floor(res.population);
             const fmt = (v, d) => `${Math.floor(v)}${d ? (d > 0 ? ` (+${Math.round(d)})` : ` (${Math.round(d)})`) : ''}`;
 
-            const directFood = Math.floor(res.apples + res.fish);
+            const directFood = Math.floor(res.apples + res.fish + res.cherry);
             const breadFeeds = Math.floor(res.bread) * C.FOOD_PER_POPULATION;
             const totalFeeds = directFood + breadFeeds;
             const statusColor  = pop > totalFeeds ? '#f87171' : '#4ade80';
@@ -145,6 +145,7 @@
                 '<b style="color:#fbbf24">🍽️ Еда и кормление:</b>',
                 `<span style="color:var(--muted)">🍞 Хлеб</span> <span style="color:#e8834a">${fmt(res.bread, del.bread)}</span> <span style="color:var(--muted);font-size:10px;">1 хлеб → ${C.FOOD_PER_POPULATION} жителей</span>`,
                 `<span style="color:var(--muted)">🍎 Яблоки</span> <span style="color:#ef4444">${fmt(res.apples, del.apples)}</span> <span style="color:var(--muted);font-size:10px;">1 яблоко → 1 жителю</span>`,
+                `<span style="color:var(--muted)">🍒 Вишни</span> <span style="color:#ef4444">${fmt(res.cherry, del.cherry)}</span> <span style="color:var(--muted);font-size:10px;">1 вишня → 1 жителю</span>`,
                 `<span style="color:var(--muted)">🐟 Рыба</span> <span style="color:#38bdf8">${fmt(res.fish, del.fish)}</span> <span style="color:var(--muted);font-size:10px;">1 рыба → 1 жителю</span>`,
                 '',
                 `<b style="color:var(--gold)">Может прокормить: ${totalFeeds} жит.</b>`,
@@ -186,7 +187,7 @@
                 fmt(res.copper, del.copper, '🔶', 'Медь',    '#b45309'),
                 fmt(res.coal,   del.coal,   '⚫', 'Уголь',   '#374151'),
                 fmt(res.steel,  del.steel,  '🔩', 'Сталь',   '#9ca3af'),
-                fmt(res.wood,   del.wood,   '🪵', 'Дерево',  '#a16207'),
+                fmt(res.wood,   del.wood,   '🟫', 'Дерево',  '#a16207'),
                 '',
                 `<span style="color:var(--muted);font-size:11px;">📦 Складов: ${warehouseCount} · Лимит: ${maxStorage}</span>`,
             ];
@@ -201,6 +202,7 @@
                 mine:        'communist',
                 factory:     'communist',
                 smelter:     'communist',
+                cherry_orchard: 'communist',
                 orchard:     'liberal',
                 port:        'liberal',
                 townhall:    'militarist',
@@ -229,9 +231,9 @@
 
             const IDEO_META = {
                 conservative: { icon: '🌾', label: 'Консерваторы',  color: '#86efac', hint: 'Фермы, мельницы, лесопилки' },
-                communist:    { icon: '⚒️',  label: 'Коммунисты',    color: '#f87171', hint: 'Шахты и заводы'  },
-                liberal:      { icon: '🍎', label: 'Либералы',       color: '#fbbf24', hint: 'Сады и порты' },
-                militarist:   { icon: '⚔️', label: 'Кратократы',    color: '#a78bfa', hint: 'Ратуша, администрации, казармы' },
+                communist:    { icon: '⚒️',  label: 'Коммунисты',    color: '#f87171', hint: 'Шахты,заводы и виш. сады'  },
+                liberal:      { icon: '🍎', label: 'Либералы',       color: '#fbbf24', hint: 'Ябл. сады и порты' },
+                militarist:   { icon: '⚔️', label: 'Милитаристы',    color: '#a78bfa', hint: 'Ратуша, администрации, казармы' },
                 anarchist:    { icon: '🔥', label: 'Анархисты',      color: '#94a3b8', hint: 'Безработные жители' },
             };
 

@@ -270,7 +270,7 @@
         window.GameState.isDragging = false;
         window.GameState.dragMoved = false;
         document.getElementById('turnCounter').textContent = '1';
-        HM.generate(config.mapSize);
+        HM.generate(config.mapSize, config.difficulty);
         R.init('gameCanvas');
         HM.center(R.canvas.width, R.canvas.height);
         R.render();
@@ -289,7 +289,7 @@
         const ok = window.SaveGame.restore(data);
         if (!ok) {
             // Fallback: start fresh
-            HM.generate(config.mapSize);
+            HM.generate(config.mapSize, config.difficulty);
         }
         document.getElementById('turnCounter').textContent = window.GameState.currentTurn;
         HM.center(R.canvas.width, R.canvas.height, /* keepCamera= */ true);

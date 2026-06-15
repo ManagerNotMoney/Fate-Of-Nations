@@ -95,6 +95,19 @@
                 workersMax: 2,
                 description: 'Только на равнинах и плодородной почве (не на песке). 1 работник = 2 яблока/ход, 2 работника = 4 яблока/ход. Каждое яблоко кормит 1 жителя. Можно назначить до 2 садовников.'
             },
+            cherry_orchard: {
+                name: 'Вишнёвый сад',
+                icon: '🍒',
+                cost: { money: 30 },
+                production: {},
+                turnsToComplete: 2,
+                allowedTiles: ['plain', 'fertile'],
+                forbiddenTiles: ['sand'],
+                unique: false,
+                workersRequired: 1,
+                workersMax: 2,
+                description: 'Только на равнинах и плодородной почве (не на песке). 1 работник = 2 вишни/ход, 2 работника = 4 вишни/ход. Каждая вишня кормит 1 жителя. Можно назначить до 2 садовников.'
+            },
             market: {
                 name: 'Рынок',
                 icon: '🏪',
@@ -237,6 +250,7 @@
             wheat:      { icon: '🌾', name: 'Пшеница',   color: '#86cc14' },
             bread:      { icon: '🍞', name: 'Хлеб',      color: '#e8834a' },
             apples:     { icon: '🍎', name: 'Яблоки',    color: '#ef4444' },
+            cherry:     { icon: '🍒', name: 'Вишня',    color: '#ef44bc' },
             fish:       { icon: '🐟', name: 'Рыба',      color: '#38bdf8' },
             iron:       { icon: '⛓️', name: 'Железо',    color: '#94a3b8' },
             copper:     { icon: '🔶', name: 'Медь',      color: '#b45309' },
@@ -262,6 +276,24 @@
         /** How far another market must be to NOT cause income penalty */
         MARKET_COMPETITION_RADIUS: 4,
         /** Max residents in the townhall */
-        TOWNHALL_MAX_RESIDENTS: 5
+        TOWNHALL_MAX_RESIDENTS: 5,
+        /** Minimum population required to build a market */
+        MARKET_MIN_POPULATION: 5,
+
+        // ─── Difficulty presets ──────────────────────────────
+        DIFFICULTY: {
+            easy: {
+                money: 100, wheat: 10, bread: 16, apples: 5, fish: 5,
+                iron: 20, copper: 20, coal: 15, steel: 5, wood: 30, population: 8
+            },
+            normal: {
+                money: 50, wheat: 0, bread: 9, apples: 0, fish: 0,
+                iron: 0, copper: 0, coal: 0, steel: 0, wood: 0, population: 3
+            },
+            hard: {
+                money: 25, wheat: 0, bread: 4, apples: 0, fish: 0,
+                iron: 0, copper: 0, coal: 0, steel: 0, wood: 0, population: 2
+            }
+        }
     };
 })();

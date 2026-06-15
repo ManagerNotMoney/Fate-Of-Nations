@@ -4,19 +4,21 @@
     const HM = window.HexMap;
 
     const BUILDING_STYLES = {
-        townhall:    { fill: '#f4b942', stroke: '#c28a1e', radius: 0.35 },
-        house:       { fill: '#60a5fa', stroke: '#2563eb', radius: 0.28 },
-        farm:        { fill: '#86efac', stroke: '#16a34a', radius: 0.30 },
-        mill:        { fill: '#fb923c', stroke: '#c2410c', radius: 0.28 },
-        orchard:     { fill: '#f87171', stroke: '#b91c1c', radius: 0.30 },
-        market:      { fill: '#fde68a', stroke: '#d97706', radius: 0.30 },
-        barracks:    { fill: '#a78bfa', stroke: '#6d28d9', radius: 0.28 },
-        mine:        { fill: '#71717a', stroke: '#3f3f46', radius: 0.30 },
-        port:        { fill: '#0ea5e9', stroke: '#0369a1', radius: 0.30 },
-        local_admin: { fill: '#64748b', stroke: '#334155', radius: 0.32 },
-        factory:     { fill: '#e8795a', stroke: '#c2410c', radius: 0.32 },
-        warehouse:   { fill: '#8b5cf6', stroke: '#6d28d9', radius: 0.30 },
-        sawmill:     { fill: '#a16207', stroke: '#713f12', radius: 0.30 }
+        townhall:       { fill: '#f4b942', stroke: '#c28a1e', radius: 0.35 },
+        house:          { fill: '#60a5fa', stroke: '#2563eb', radius: 0.28 },
+        farm:           { fill: '#86efac', stroke: '#16a34a', radius: 0.30 },
+        mill:           { fill: '#fb923c', stroke: '#c2410c', radius: 0.28 },
+        orchard:        { fill: '#f87171', stroke: '#b91c1c', radius: 0.30 },
+        cherry_orchard: { fill: '#9966db', stroke: '#9e1287', radius: 0.30 },
+        market:         { fill: '#fde68a', stroke: '#d97706', radius: 0.30 },
+        barracks:       { fill: '#a78bfa', stroke: '#6d28d9', radius: 0.28 },
+        mine:           { fill: '#71717a', stroke: '#3f3f46', radius: 0.30 },
+        port:           { fill: '#0ea5e9', stroke: '#0369a1', radius: 0.30 },
+        local_admin:    { fill: '#64748b', stroke: '#334155', radius: 0.32 },
+        factory:        { fill: '#e8795a', stroke: '#c2410c', radius: 0.32 },
+        warehouse:      { fill: '#8b5cf6', stroke: '#6d28d9', radius: 0.30 },
+        sawmill:        { fill: '#a16207', stroke: '#713f12', radius: 0.30 },
+        smelter:        { fill: '#7c2d12', stroke: '#451a03', radius: 0.30 }
     };
 
     // ── Precomputed hex vertex offsets (unit-circle, pointy-top) ──────────
@@ -303,6 +305,22 @@
                 ctx.textAlign    = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(cfg.icon, cx, cy);
+            }
+
+            const accident = window.HexMap._lastAccident;
+            if (accident && accident.col === col && accident.row === row) {
+                const currentTurn = window.GameState?.currentTurn || 0;
+                // Показываем только в тот же ход, когда произошёл
+                if (accident.turn === currentTurn) {
+                    ctx.font = (s * 0.55) + 'px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#ef4444';
+                    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                    ctx.shadowBlur = 6;
+                    ctx.fillText('💀', cx, cy - s * 0.15);
+                    ctx.shadowBlur = 0;
+                }
             }
 
             // Level star ⭐ (top-right)

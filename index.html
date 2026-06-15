@@ -29,7 +29,7 @@
         <!-- LEFT: Hero panel -->
         <div class="menu-hero">
             <div class="menu-hero-inner">
-                <div class="menu-badge">🎮 Пре-альфа ◆ v0.0.6</div>
+                <div class="menu-badge">🎮 Пре-альфа ◆ v0.0.7</div>
 
                 <div class="menu-icon">🏛️</div>
                 <h1 class="menu-title">Fate Of<br>Nations</h1>
@@ -49,14 +49,6 @@
                         <span class="pillar-label">Экономика</span>
                     </div>
                     <div class="menu-pillar">
-                        <span class="pillar-icon">⚔️</span>
-                        <span class="pillar-label">Стратегия</span>
-                    </div>
-                    <div class="menu-pillar">
-                        <span class="pillar-icon">🏢</span>
-                        <span class="pillar-label">Политика</span>
-                    </div>
-                    <div class="menu-pillar">
                         <span class="pillar-icon">🌍</span>
                         <span class="pillar-label">Песочница</span>
                     </div>
@@ -65,15 +57,15 @@
                 <!-- Changelog inline in hero -->
                 <div class="hero-changelog">
                     <div class="hero-changelog-header">
-                        <span class="hero-changelog-name">💰 Экономический бум!</span>
-                        <span class="hero-changelog-version">v0.0.6 · 15.06.2026</span>
+                        <span class="hero-changelog-name">🍒 Вишнёвая сложность!</span>
+                        <span class="hero-changelog-version">v0.0.7 · 15.06.2026</span>
                     </div>
                     <div class="hero-changelog-items">
-                        <div class="hero-cl-item"><span class="cl-dot new"></span>Заводы и порты: режимы производства</div>
-                        <div class="hero-cl-item"><span class="cl-dot new"></span>2-й уровень для завода, порта и казармы</div>
-                        <div class="hero-cl-item"><span class="cl-dot new"></span>Новая плавильня</div>
-                        <div class="hero-cl-item"><span class="cl-dot improve"></span>До 6 рабочих на заводе</div>
-                        <div class="hero-cl-item"><span class="cl-dot balance"></span>Баланс мельницы</div>
+                        <div class="hero-cl-item"><span class="cl-dot new"></span>Сложность влияет на стартовые ресурсы</div>
+                        <div class="hero-cl-item"><span class="cl-dot improve"></span>Улучшена стабильность игры</div>
+                        <div class="hero-cl-item"><span class="cl-dot improve"></span>Улучшен текст всех ивентов</div>
+                        <div class="hero-cl-item"><span class="cl-dot fix"></span>Плавильня теперь отображается корректно</div>
+                        <div class="hero-cl-item"><span class="cl-dot fix"></span>Исправлена статистика яблоневого сада</div>
                     </div>
                     <button class="hero-cl-expand" id="btnFullChangelog">Все изменения ↗</button>
                 </div>
@@ -139,69 +131,73 @@
             <div class="changelog-icon">📋</div>
             <div>
                 <div class="changelog-title">Список изменений</div>
-                <div class="changelog-version">Пре-альфа v0.0.6</div>
+                <div class="changelog-version">Пре-альфа v0.0.7</div>
             </div>
         </div>
         <div class="changelog-update-header">
-            <div class="changelog-update-name">💰 Экономический бум!</div>
+            <div class="changelog-update-name">🍒 Вишнёвая сложность!</div>
             <div class="changelog-update-desc">
-                Это обновление все цело посвящено экономическому аспекту игры, добавление большего функционалу зданиям и добавление
-                вещей, которые бы давно стоило бы добавить! Также, обновление как фундамент для v0.0.7 которое будет добавлять и улучшать
-                производственные цепочки в игре, а также добавить новые ивенты связанные с производством!
+                Обновление v0.0.7 добавляет влияние уровня сложности на стартовые ресурсы — теперь каждая
+                сложность даёт уникальный игровой опыт! Также исправлены большая часть багов, а также добавлен новый ресурс: Вишня!
+                А также новое здание "Вишнёвый сад"
             </div>
         </div>
         <div class="changelog-body">
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Добавлен 2-й уровень: Заводу, Порту и Казарме</span>
+                <span class="changelog-text">Уровень сложности влияет на стартовые ресурсы (еду, людей, деньги, материалы)</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Добавлены типы производств для завода</span>
+                <span class="changelog-text">Новичок: 100💰 16🍞 8👥 30🟫 20⛓️ 20🔶 — комфортный старт</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Добавлены типы портов</span>
+                <span class="changelog-text">Стандарт: 50💰 9🍞 3👥 — классический баланс</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Добавлено новое здание: Плавильня</span>
+                <span class="changelog-text">Эксперт: 25💰 4🍞 2👥 — жестокий вызов для профи</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Увеличен лимит работников для завода до 6</span>
+                <span class="changelog-text">Новая еда: Вишня и новое здание: Вишнёвый сад</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Добавлено производство стали в Заводе</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Склад даёт +4 дохода к порту, если расположен в радиусе 2 клеток</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge improve">Улучшение</span>
-                <span class="changelog-text">Улучшено главное меню игры</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge improve">Улучшение</span>
-                <span class="changelog-text">Лесопилка на плодородной почве даёт 6 дерева/ход</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge improve">Улучшение</span>
-                <span class="changelog-text">Разделена информация о доходе зданий и заводов</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge balance">Баланс</span>
-                <span class="changelog-text">Сбалансирован 2 уровень для мельницы</span>
+                <span class="changelog-text">Новая ивент: Вишнёвый бум!</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge fix">Исправление</span>
-                <span class="changelog-text">Ивент "Миграция" теперь корректно отображает количество потерянных жителей</span>
+                <span class="changelog-text">Исправлена ошибка с кол-вом людей и рынком</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge fix">Исправление</span>
-                <span class="changelog-text">На песке теперь можно строить больше зданий</span>
+                <span class="changelog-text">Плавильня теперь корректно отображается на карте</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text">Исправлена статистика плавильни в панели здания — показывает производство угля</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text">Исправлена статистика яблоневого сада в панели здания — показывает яблоки</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge improve">Улучшение</span>
+                <span class="changelog-text">Улучшена стабильность: добавлены защитные проверки в экономику</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge improve">Улучшение</span>
+                <span class="changelog-text">После ивента "Несчастный случай" 1 ход, отображается 💀 над зданием где был ивент</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge improve">Улучшение</span>
+                <span class="changelog-text">Улучшены текст всех ивентов</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge improve">Улучшение</span>
+                <span class="changelog-text">Сохранение теперь хранит выбранную сложность</span>
             </div>
         </div>
         <div class="changelog-footer"><span>Обновлено: 15.06.2026</span></div>
@@ -247,17 +243,17 @@
                 <div class="setup-option diff-easy" data-diff="easy">
                     <span class="setup-opt-icon">🌱</span>
                     <span class="setup-opt-name">Новичок</span>
-                    <span class="setup-opt-desc">Спокойное развитие</span>
+                    <span class="setup-opt-desc">100💰 16🍞 8👥 30🪵</span>
                 </div>
                 <div class="setup-option diff-normal active" data-diff="normal">
                     <span class="setup-opt-icon">⚔️</span>
                     <span class="setup-opt-name">Стандарт</span>
-                    <span class="setup-opt-desc">Сбалансированный вызов</span>
+                    <span class="setup-opt-desc">50💰 9🍞 3👥</span>
                 </div>
                 <div class="setup-option diff-hard" data-diff="hard">
                     <span class="setup-opt-icon">🔥</span>
                     <span class="setup-opt-name">Эксперт</span>
-                    <span class="setup-opt-desc">Жестокий мир</span>
+                    <span class="setup-opt-desc">25💰 4🍞 2👥</span>
                 </div>
             </div>
         </div>
@@ -312,37 +308,36 @@
             <div class="author-avatar" style="background:linear-gradient(135deg,#1e3a5f,#4f8ef7);">🧠</div>
             <div class="author-name">Claude Sonnet 4.6</div>
             <div class="author-role">ИИ-Ассистент · Anthropic</div>
-            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">Lead AI Developer</div>
+            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">AI-Assistant</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Архитектура, экономика, гексагональная сетка, здания, UI.<br>
-                Строю города из кода — с удовольствием. Особенно яблоневые сады 🍎
+                Помощь в архитектуре, экономике, рефакторинге, UI.<br>
             </div>
         </div>
         <div class="author-card" style="border-color:rgba(124,58,237,0.25);">
             <div class="author-avatar" style="background:linear-gradient(135deg,#9333ea,#6366f1);">🤖</div>
             <div class="author-name">Kimi 2.6</div>
-            <div class="author-role">ИИ-ассистент · Moonshot AI</div>
-            <div class="author-badge" style="background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.3);color:#a78bfa;">AI Co-Developer</div>
+            <div class="author-role">ИИ-Ассистент · Moonshot AI</div>
+            <div class="author-badge" style="background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.3);color:#a78bfa;">AI-Assistant</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Архитектура, экономика, UI, новые здания, новые события, переработка шахт и ресурсов. Надёжный напарник в геймдеве! 🚀
+                Помощь в архитектуре, экономике, UI.<br>
             </div>
         </div>
         <div class="author-card" style="border-color:rgba(16,163,127,0.25);">
             <div class="author-avatar" style="background:linear-gradient(135deg,#065f46,#10a37f);">🤖</div>
             <div class="author-name">ChatGPT</div>
-            <div class="author-role">ИИ-ассистент · OpenAI</div>
-            <div class="author-badge" style="background:rgba(16,163,127,0.12);border-color:rgba(16,163,127,0.3);color:#34d399;">Bug Hunter</div>
+            <div class="author-role">ИИ-Ассистент · OpenAI</div>
+            <div class="author-badge" style="background:rgba(16,163,127,0.12);border-color:rgba(16,163,127,0.3);color:#34d399;">AI-Assistant</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Помог найти и исправить баг, из-за которого карта решила жить по своим правилам. 🐛→✅
+                Помощь в проектировании новых идей и механик.
             </div>
         </div>
         <div class="author-card" style="border-color:rgba(244,185,66,0.25);">
             <div class="author-avatar" style="background:linear-gradient(135deg,#2b5f8a,#1e3a5f);">🌀</div>
             <div class="author-name">DeepSeek</div>
-            <div class="author-role">ИИ-ассистент · deepseek.ai</div>
-            <div class="author-badge" style="background:rgba(244,185,66,0.12);border-color:rgba(244,185,66,0.35);color:var(--gold);">Changelog Engineer</div>
+            <div class="author-role">ИИ-Ассистент · deepseek.ai</div>
+            <div class="author-badge" style="background:rgba(244,185,66,0.12);border-color:rgba(244,185,66,0.35);color:var(--gold);">AI-Code Reviewer</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Анализирует различия между версиями и превращает их в человеческий язык. 😅
+                Ревьювер кода, помощь в подготовке списка изменений
             </div>
         </div>
 
@@ -369,6 +364,7 @@
             <div class="howto-row"><span class="howto-icon">🌾</span><div class="howto-text"><b>Ферма</b> — производит пшеницу. Только на плодородной почве. <small>💰15 · 1 ход</small></div></div>
             <div class="howto-row"><span class="howto-icon">⚙️</span><div class="howto-text"><b>Мельница</b> — превращает пшеницу в хлеб. <small>💰30 · 2 хода</small></div></div>
             <div class="howto-row"><span class="howto-icon">🍎</span><div class="howto-text"><b>Яблоневый сад</b> — 1 работник = 2 яблока/ход, 2 работника = 4. <small>💰25 · 2 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🍒</span><div class="howto-text"><b>Вишнёвый сад</b> — 1 работник = 2 вишни/ход, 2 работника = 4. <small>💰30 · 2 хода</small></div></div>
             <div class="howto-row"><span class="howto-icon">🏪</span><div class="howto-text"><b>Рынок</b> — 0.25 монеты за каждого жителя в радиусе 4 клеток. <small>💰40 · 5 ходов</small></div></div>
             <div class="howto-row"><span class="howto-icon">⚔️</span><div class="howto-text"><b>Казармы</b> — +3 обороны/ход. <small>💰50 · 3 хода</small></div></div>
             <div class="howto-row"><span class="howto-icon">⛏️</span><div class="howto-text"><b>Шахта</b> — золото, железо, медь или уголь. Только в горах. <small>💰35 · 2 хода</small></div></div>
@@ -422,7 +418,7 @@
             <p style="margin-top:12px;">Автор проекта — <b>ManagerMoney</b>, который занимается созданием игр на протяжении <b>7 лет</b>.</p>
             <div class="about-stats">
                 <div class="about-stat">
-                    <span class="about-stat-val">v0.0.6</span>
+                    <span class="about-stat-val">v0.0.7</span>
                     <span class="about-stat-label">Версия</span>
                 </div>
                 <div class="about-stat">
@@ -518,7 +514,7 @@
             <div class="game-logo">🏛️</div>
             <div>
                 <span class="game-title">Fate Of Nations</span>
-                <span class="game-version" data-version="v0.0.6">v0.0.6</span>
+                <span class="game-version" data-version="v0.0.7">v0.0.7</span>
             </div>
         </div>
         <div class="game-stats">

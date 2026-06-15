@@ -789,12 +789,23 @@
                     const active = E.isBuildingActive(HM, building.col, building.row);
                     const woodNeeded = bc.consumption?.wood || 3;
                     const coalProduced = bc.production?.coal || 1;
+                    parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">⚫ +${coalProduced} угля/ход</span>`);
                 } else if (building.type === 'sawmill') {
                     const active = E.isBuildingActive(HM, building.col, building.row);
                     const tile = HM.data[building.row][building.col];
                     const baseWood = bc.production?.wood || 3;
                     const wood = tile.type === 'fertile' ? baseWood * 2 : baseWood;
                     parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🟫 +${wood} дерева/ход (${tile.type === 'fertile' ? 'плодородная' : 'равнина'})</span>`);
+                } else if (building.type === 'orchard') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const assigned = building.assignedWorkers || 0;
+                    const apples = active ? 2 * assigned : 0;
+                    parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🍎 +${apples} яблок/ход (${assigned}/2 садовников)</span>`);
+                } else if (building.type === 'cherry_orchard') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const assigned = building.assignedWorkers || 0;
+                    const cherry = active ? 2 * assigned : 0;
+                    parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🍒 +${cherry} вишни/ход (${assigned}/2 садовников)</span>`);
                 } else if (building.type === 'port') {
                     const active = E.isBuildingActive(HM, building.col, building.row);
                     const portLevel = building.level || 1;

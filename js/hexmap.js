@@ -236,9 +236,13 @@
         // MAP GENERATION
         // ════════════════════════════════════════════════════
 
-        /** Generates a new map of the given size preset key ('small'|'medium'|'large'). */
-        generate: function(sizeKey) {
+        /** Generates a new map of the given size preset key ('small'|'medium'|'large').
+         *  @param {string} sizeKey - map size
+         *  @param {string} difficulty - 'easy' | 'normal' | 'hard'
+         */
+        generate: function(sizeKey, difficulty) {
             const dims = C.MAP_SIZES[sizeKey] || C.MAP_SIZES.medium;
+            const diff = C.DIFFICULTY[difficulty] || C.DIFFICULTY.normal;
             this.cols = dims.cols;
             this.rows = dims.rows;
             this.data = [];
@@ -249,8 +253,14 @@
             this.territory = {};
             this.citizens = [];
             this._nextCitizenId = 1;
-            this.resources = { money: 50, wheat: 0, bread: 8, apples: 0, fish: 0, iron: 0, copper: 0, coal: 0, steel: 0, wood: 0, population: 3, defense: 0 };
-            this.deltas = { money: 0, wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0, coal: 0, steel: 0, wood: 0, population: 0, defense: 0 };
+            this.resources = {
+                money: diff.money, wheat: diff.wheat, bread: diff.bread,
+                apples: diff.apples, fish: diff.fish, iron: diff.iron,
+                copper: diff.copper, coal: diff.coal, steel: diff.steel,
+                wood: diff.wood, population: diff.population, defense: 0, cherry:0
+            };
+            this.deltas = { money: 0, wheat: 0, bread: 0, apples: 0, fish: 0, iron: 0, copper: 0, coal: 0, steel: 0, wood: 0, population: 0, defense: 0,cherry:0 };
+            this.difficulty = difficulty || 'normal';
             this.lastEvents = [];
             this.pendingEventResults = [];
             this.winStreakTurns = 0;

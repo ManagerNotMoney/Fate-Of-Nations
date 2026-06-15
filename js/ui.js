@@ -83,9 +83,10 @@
             set('resMoney',      res.money,                              del.money);
             // Food deficit indicator
             const applesAvail = Math.max(0, res.apples + del.apples);
+            const cherryAvail = Math.max(0, res.cherry + del.cherry)
             const fishAvail   = Math.max(0, res.fish   + del.fish);
             const breadAvail  = Math.max(0, res.bread  + del.bread);
-            const totalFoodCap = applesAvail + fishAvail + breadAvail * C.FOOD_PER_POPULATION;
+            const totalFoodCap = applesAvail + fishAvail + cherryAvail + breadAvail * C.FOOD_PER_POPULATION;
             const foodDeficit  = res.population > 0 ? Math.max(0, res.population - totalFoodCap) : 0;
 
             const foodChip = document.getElementById('resFoodChip');
@@ -93,7 +94,7 @@
 
             const foodEl = document.getElementById('resFood');
             if (foodEl) {
-                const foodDisplay = fmtNum(Math.floor(res.bread + res.apples + res.fish));
+                const foodDisplay = fmtNum(Math.floor(res.bread + res.apples + res.fish + res.cherry));
                 const deltaHtml = fmtDelta(del.bread + del.apples + del.fish);
                 if (foodDeficit > 0) {
                     foodEl.innerHTML = foodDisplay + deltaHtml +
@@ -147,7 +148,12 @@
                     setTimeout(() => this.showNotification(`👷 Авто-работа: назначено ${autoAssigned} рабочих на новые здания`, 3000), 600);
                 }
             }
-
+            if (window.HexMap._lastAccident) {
+                const currentTurn = window.GameState?.currentTurn || 0;
+                if (window.HexMap._lastAccident.turn < currentTurn) {
+                    window.HexMap._lastAccident = null;
+                }
+            }
             // ── World event notifications ───────────────────
             if (HM.pendingEventResults && HM.pendingEventResults.length > 0) {
                 const ev = HM.pendingEventResults[0];
