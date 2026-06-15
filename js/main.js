@@ -40,11 +40,16 @@
     function createParticle(container) {
         const p = document.createElement('div');
         p.className = 'particle';
-        const size = Math.random() * 3 + 2;
-        p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;` +
-            `animation-duration:${Math.random()*8+6}s;animation-delay:${Math.random()*5}s;` +
-            `background:${['#4f8ef7','#7c3aed','#22c55e','#f4b942'][Math.floor(Math.random()*4)]};` +
-            `opacity:${Math.random()*0.3+0.1};`;
+        const size = Math.random() * 3 + 1.5;
+        const opacity = (Math.random() * 0.25 + 0.08).toFixed(3);
+        const colors = ['#4f8ef7','#7c3aed','#22c55e','#f4b942','#60a5fa','#a78bfa'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const duration = Math.random() * 10 + 8;
+        const delay = Math.random() * 8;
+        p.style.cssText = `width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;left:${Math.random()*100}%;` +
+            `animation-duration:${duration}s;animation-delay:${delay}s;` +
+            `background:${color};` +
+            `--particle-opacity:${opacity};`;
         container.appendChild(p);
         p.addEventListener('animationend', () => { p.remove(); createParticle(container); });
     }
@@ -296,22 +301,28 @@
     }
 
     function _refreshContinueBtn() {
-        const btn  = document.getElementById('btnContinue');
-        const info = document.getElementById('saveSlotInfo');
+        const btn       = document.getElementById('btnContinue');
+        const slotCard  = document.getElementById('saveSlotCard');
+        const noSave    = document.getElementById('noSaveCard');
+        const cityEl    = document.getElementById('saveSlotCity');
+        const metaEl    = document.getElementById('saveSlotMeta');
         if (!btn) return;
         const meta = window.SaveGame?.getMeta();
         if (meta) {
             btn.style.display = '';
-            if (info) {
+            if (slotCard) slotCard.style.display = '';
+            if (noSave)   noSave.style.display   = 'none';
+            if (cityEl)   cityEl.textContent = meta.cityName || 'Безымянный город';
+            if (metaEl) {
                 const date = new Date(meta.savedAt);
                 const dateStr = date.toLocaleDateString('ru-RU', { day:'numeric', month:'short' }) +
                     ' ' + date.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
-                info.textContent = `${meta.cityName} · ход ${meta.turn} · ${dateStr}`;
-                info.style.display = '';
+                metaEl.textContent = `Ход ${meta.turn} · ${dateStr}`;
             }
         } else {
             btn.style.display = 'none';
-            if (info) info.style.display = 'none';
+            if (slotCard) slotCard.style.display = 'none';
+            if (noSave)   noSave.style.display   = '';
         }
     }
 

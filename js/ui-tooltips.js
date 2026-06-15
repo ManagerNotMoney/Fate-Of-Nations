@@ -89,32 +89,43 @@
             const chip = document.getElementById('resMoney')?.closest('.res-chip');
             if (!chip) return;
 
-            let buildingIncome = 0, marketIncome = 0;
+            let buildingIncome = 0, factoryIncome = 0, marketIncome = 0;
             for (const key of Object.keys(HM.buildings)) {
                 const b = HM.buildings[key];
                 const cfg = C.BUILDINGS[b.type];
                 if (!cfg) continue;
                 if (b.type === 'market') {
                     marketIncome += E.getMarketIncome(HM, b.col, b.row);
+                } else if (b.type === 'factory') {
+                    if (E.isBuildingActive(HM, b.col, b.row)) {
+                        const factLevel = b.level || 1;
+                        const factMode = b.factoryMode || 'goods';
+                        const effectiveMode = (factMode === 'steel' && factLevel < 2) ? 'goods' : factMode;
+                        const prod = cfg.factoryModeProduction?.[effectiveMode] || {};
+                        const assigned = b.assignedWorkers || 0;
+                        const extraWorkers = Math.max(0, assigned - cfg.workersRequired);
+                        const factor = 1 + extraWorkers * (1/3);
+                        factoryIncome += Math.round((prod.money || 0) * factor * 10) / 10;
+                    }
                 } else if (cfg.production?.money && E.isBuildingActive(HM, b.col, b.row)) {
                     buildingIncome += cfg.production.money;
                 }
             }
             const popIncome = HM.townHallBuilt ? Math.floor(HM.resources.population * C.MONEY_PER_POPULATION) : 0;
-            const total = C.BASE_INCOME + buildingIncome + marketIncome + popIncome;
+            const total = C.BASE_INCOME + buildingIncome + factoryIncome + marketIncome + popIncome;
 
             const lines = [
-                '<b style="color:#4ade80">💰 Доходы:</b>',
-                `<span style="color:var(--muted)">Базовый доход</span> <span style="color:#4ade80">+${C.BASE_INCOME}</span>`,
+                '<b style=\"color:#4ade80\">\u{1F4B0} Доходы:</b>',
+                `<span style=\"color:var(--muted)\">Базовый доход</span> <span style=\"color:#4ade80\">+${C.BASE_INCOME}</span>`,
             ];
-            if (buildingIncome > 0) lines.push(`<span style="color:var(--muted)">Здания</span> <span style="color:#4ade80">+${buildingIncome}</span>`);
-            if (marketIncome > 0)   lines.push(`<span style="color:var(--muted)">Рынки (1💰 за жителя рядом)</span> <span style="color:#4ade80">+${marketIncome}</span>`);
-            if (popIncome > 0)      lines.push(`<span style="color:var(--muted)">Жители (${Math.floor(HM.resources.population)} × 1)</span> <span style="color:#4ade80">+${popIncome}</span>`);
-            lines.push('', `<b style="color:var(--gold)">Итого: +${total}/ход</b>`);
+            if (buildingIncome > 0) lines.push(`<span style=\"color:var(--muted)\">Здания</span> <span style=\"color:#4ade80\">+${buildingIncome}</span>`);
+            if (factoryIncome > 0)  lines.push(`<span style=\"color:var(--muted)\">Заводы</span> <span style=\"color:#4ade80\">+${factoryIncome}</span>`);
+            if (marketIncome > 0)   lines.push(`<span style=\"color:var(--muted)\">Рынки (1💰 за жителя рядом)</span> <span style=\"color:#4ade80\">+${marketIncome}</span>`);
+            if (popIncome > 0)      lines.push(`<span style=\"color:var(--muted)\">Жители (${Math.floor(HM.resources.population)} × 1)</span> <span style=\"color:#4ade80\">+${popIncome}</span>`);
+            lines.push('', `<b style=\"color:var(--gold)\">Итого: +${total}/ход</b>`);
 
             this._setChipTooltip(chip, lines.join('\n'));
         },
-
         _updateFoodTooltip: function() {
             const chip = document.getElementById('resFoodChip');
             if (!chip) return;
@@ -189,6 +200,7 @@
                 sawmill:     'conservative',
                 mine:        'communist',
                 factory:     'communist',
+                smelter:     'communist',
                 orchard:     'liberal',
                 port:        'liberal',
                 townhall:    'militarist',
@@ -358,6 +370,12 @@
                 const income = E.getMarketIncome(HM, building.col, building.row);
                 return `<br><span style="color:#4ade80;font-size:11px;">💰 +${income} монет/ход (1💰 за жителя рядом)</span>` + strikeInfo;
             }
+            if (building.type === 'sawmill') {
+                const tile = HM.data[building.row][building.col];
+                const baseWood = bc.production?.wood || 3;
+                const wood = tile.type === 'fertile' ? baseWood * 2 : baseWood;
+                return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">🟫 +${wood} дерева/ход (${tile.type === 'fertile' ? 'плодородная' : 'равнина'})${suffix}</span>` + strikeInfo;
+            }
             if (building.type === 'mine') {
                 const mode = building.mineMode || 'gold';
                 const modeNames = bc.mineModeNames || {};
@@ -375,8 +393,8 @@
             }
             if (building.type === 'mill') {
                 const level = building.level || 1;
-                const wheatNeeded = Math.round(2 * (level === 2 ? 1.5 : 1));
-                const breadProduced = Math.round(2 * (level === 2 ? 1.5 : 1));
+                const wheatNeeded = level === 2 ? 4 : 2;
+                const breadProduced = level === 2 ? 5 : 2;
                 return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">🍞 +${breadProduced} хлеба/ход (🌾 -${wheatNeeded})${suffix}</span>` + strikeInfo;
             }
             if (building.type === 'farm') {
@@ -387,8 +405,24 @@
                 const total = Math.round(perWorker * workers * 10) / 10;
                 return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">🌾 +${total} пшеницы/ход (${workers} раб.)${suffix}</span>` + strikeInfo;
             }
+            if (building.type === 'smelter') {
+                const active = E.isBuildingActive(HM, building.col, building.row);
+                const woodNeeded = bc.consumption?.wood || 3;
+                const coalProduced = bc.production?.coal || 1;
+                return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">⚫ +${coalProduced} угля/ход (🪵 -${woodNeeded})${suffix}</span>` + strikeInfo;
+            }
             if (building.type === 'port') {
+                const portLevel = building.level || 1;
+                const portMode = building.portMode || 'fishing';
+                const effectiveMode = (portMode === 'trade' && portLevel < 2) ? 'fishing' : portMode;
                 const assigned = building.assignedWorkers || 0;
+                if (effectiveMode === 'trade') {
+                    const hasWarehouse = E.hasNearbyWarehouse(HM, building.col, building.row);
+                    const bonusMoney = hasWarehouse ? 4 : 0;
+                    const totalMoney = 3 + bonusMoney;
+                    const bonusText = hasWarehouse ? ' (+4 💰 от склада)' : '';
+                    return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">🚢 Торговля: +1 🐟 +${totalMoney} 💰/ход${bonusText}${suffix}</span>` + strikeInfo;
+                }
                 const fish = assigned === 1 ? 2 : assigned >= 2 ? 5 : 0;
                 return `<br><span style="color:${col};font-size:11px;">🐟 +${fish} рыбы/ход (${assigned}/2 рыбаков)${suffix}</span>` + strikeInfo;
             }
@@ -396,6 +430,21 @@
                 const assigned = building.assignedWorkers || 0;
                 const apples = active ? 2 * assigned : 0;
                 return `<br><span style="color:${col};font-size:11px;">🍎 +${apples} яблок/ход (${assigned}/2 садовников)${suffix}</span>` + strikeInfo;
+            }
+            if (building.type === 'factory') {
+                const factLevel = building.level || 1;
+                const factMode = building.factoryMode || 'goods';
+                const effectiveMode = (factMode === 'steel' && factLevel < 2) ? 'goods' : factMode;
+                const cfg2 = C.BUILDINGS['factory'];
+                const prod = cfg2.factoryModeProduction?.[effectiveMode] || {};
+                const cons = cfg2.factoryModeConsumption?.[effectiveMode] || {};
+                const assigned = building.assignedWorkers || 0;
+                const extraWorkers = Math.max(0, assigned - cfg2.workersRequired);
+                const factor = 1 + extraWorkers * (1/3);
+                const prodStr = Object.entries(prod).map(([r, a]) => `+${Math.round(a * factor * 10)/10} ${C.RESOURCES[r]?.icon || r}`).join(' ');
+                const consStr = Object.entries(cons).map(([r, a]) => `-${a} ${C.RESOURCES[r]?.icon || r}`).join(' ');
+                const modeName = cfg2.factoryModeNames?.[effectiveMode] || effectiveMode;
+                return `<br><span style="color:${active ? '#4ade80' : 'var(--muted)'};font-size:11px;">${modeName}: ${prodStr} (${consStr})${suffix}</span>` + strikeInfo;
             }
             if (bc.production) {
                 const prodStr = Object.entries(bc.production)

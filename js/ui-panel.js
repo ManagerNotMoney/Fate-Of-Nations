@@ -92,6 +92,12 @@
                         if (building.type === 'mine') {
                             html += this._renderMineTab(building);
                         }
+                        if (building.type === 'factory') {
+                            html += this._renderFactoryTab(building);
+                        }
+                        if (building.type === 'port') {
+                            html += this._renderPortTab(building);
+                        }
                         if (building.type === 'local_admin' && (building.assignedWorkers || 0) >= 1) {
                             html += this._renderDistrictTab(building);
                         }
@@ -125,6 +131,8 @@
                     this.buildingsList.innerHTML = html;
                     this._bindWorkerButtons(col, row);
                     this._bindMineModeButtons(col, row);
+                    this._bindFactoryModeButtons(col, row);
+                    this._bindPortModeButtons(col, row);
                     this._bindCancelDemolishButtons(col, row);
                     this._bindCrisisButtons(col, row);
                 } else {
@@ -422,6 +430,48 @@
             </div>`;
         },
 
+        _renderFactoryTab: function(building) {
+            const cfg = C.BUILDINGS['factory'];
+            const level = building.level || 1;
+            const mode = building.factoryMode || 'goods';
+            const modes = cfg.factoryModes || ['goods'];
+            const modeNames = cfg.factoryModeNames || {};
+            const modeIcons = cfg.factoryModeIcons || {};
+            const modeProd = cfg.factoryModeProduction || {};
+            const modeCons = cfg.factoryModeConsumption || {};
+
+            const modeButtons = modes.map(m => {
+                const isActive = m === mode;
+                const locked = m === 'steel' && level < 2;
+                const prod = modeProd[m];
+                const cons = modeCons[m];
+                const prodStr = prod ? Object.entries(prod).map(([r, a]) => `+${a} ${C.RESOURCES[r]?.icon || r}`).join(' ') : '';
+                const consStr = cons ? Object.entries(cons).map(([r, a]) => `-${a} ${C.RESOURCES[r]?.icon || r}`).join(' ') : '';
+                return `<button class="mine-mode-btn ${isActive ? 'active' : ''} ${locked ? 'mine-mode-btn--locked' : ''}" data-factory-mode="${m}" ${locked ? 'disabled' : ''}>
+                    <span class="mine-mode-icon">${modeIcons[m] || '🏭'}</span>
+                    <span class="mine-mode-name">${modeNames[m] || m}${locked ? ' 🔒 ур.2' : ''}</span>
+                    <span class="mine-mode-prod">${prodStr}${consStr ? ' | ' + consStr : ''}</span>
+                </button>`;
+            }).join('');
+
+            const assigned = building.assignedWorkers || 0;
+            const extraWorkers = Math.max(0, assigned - cfg.workersRequired);
+            const efficiency = Math.round((1 + extraWorkers * (1/3)) * 100);
+
+            return `<div class="info-tab mine-tab">
+                <div class="info-tab-header">
+                    <span class="info-tab-icon">🏭</span>
+                    <span class="info-tab-title">Режим производства</span>
+                    <span class="info-tab-badge badge-gold">${modeNames[mode] || mode}</span>
+                </div>
+                <div class="info-tab-body">
+                    <div class="mine-mode-grid">${modeButtons}</div>
+                    <div class="mine-hint">⚡ Эффективность: <b>${efficiency}%</b> (${assigned}/${cfg.workersMax} рабочих). Каждый доп. рабочий сверх ${cfg.workersRequired} даёт +33%.</div>
+                    ${level < 2 ? '<div class="mine-hint" style="color:var(--muted);margin-top:4px;">🔒 Режим «Сталь» открывается на уровне 2</div>' : ''}
+                </div>
+            </div>`;
+        },
+
         _renderMarketTab: function(building) {
             const income = E.getMarketIncome(HM, building.col, building.row);
             const cfg = C.BUILDINGS['market'];
@@ -472,6 +522,95 @@
                     if (b && b.type === 'mine') {
                         b.mineMode = newMode;
                         if (window.UI) window.UI.showNotification(`⛏️ Режим шахты: ${C.BUILDINGS.mine.mineModeNames[newMode] || newMode}`);
+                        this.openPanel(col, row);
+                        window.Renderer.render();
+                    }
+                });
+            });
+        },
+
+        _bindFactoryModeButtons: function(col, row) {
+            const modeBtns = this.buildingsList.querySelectorAll('[data-factory-mode]');
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const newMode = btn.dataset.factoryMode;
+                    const b = HM.buildings[col + ',' + row];
+                    if (b && b.type === 'factory') {
+                        const level = b.level || 1;
+                        if (newMode === 'steel' && level < 2) {
+                            if (window.UI) window.UI.showNotification('🔒 Режим «Сталь» доступен только на уровне 2');
+                            return;
+                        }
+                        b.factoryMode = newMode;
+                        if (window.UI) window.UI.showNotification(`🏭 Режим завода: ${C.BUILDINGS.factory.factoryModeNames[newMode] || newMode}`);
+                        E.computeDeltas(HM);
+                        this.openPanel(col, row);
+                        window.Renderer.render();
+                    }
+                });
+            });
+        },
+
+        _renderPortTab: function(building) {
+            const cfg = C.BUILDINGS['port'];
+            const level = building.level || 1;
+            const mode = building.portMode || 'fishing';
+            const modes = cfg.portModes || ['fishing'];
+            const modeNames = cfg.portModeNames || {};
+            const modeIcons = cfg.portModeIcons || {};
+            const assigned = building.assignedWorkers || 0;
+
+            const modeButtons = modes.map(m => {
+                const isActive = m === mode;
+                const locked = m === 'trade' && level < 2;
+                let prodStr = '';
+                if (m === 'fishing') {
+                    const fish = assigned === 1 ? 2 : assigned >= 2 ? 5 : 2;
+                    prodStr = `+${fish} 🐟`;
+                } else if (m === 'trade') {
+                    prodStr = '+1 🐟 +3 💰';
+                }
+                return `<button class="mine-mode-btn ${isActive ? 'active' : ''} ${locked ? 'mine-mode-btn--locked' : ''}" data-port-mode="${m}" ${locked ? 'disabled' : ''}>
+                    <span class="mine-mode-icon">${modeIcons[m] || '⚓'}</span>
+                    <span class="mine-mode-name">${modeNames[m] || m}${locked ? ' 🔒 ур.2' : ''}</span>
+                    <span class="mine-mode-prod">${prodStr}</span>
+                </button>`;
+            }).join('');
+
+            const hasWarehouse = E.hasNearbyWarehouse(HM, building.col, building.row);
+            const tradeBonus = hasWarehouse ? 4 : 0;
+
+            return `<div class="info-tab mine-tab">
+                <div class="info-tab-header">
+                    <span class="info-tab-icon">⚓</span>
+                    <span class="info-tab-title">Режим порта</span>
+                    <span class="info-tab-badge badge-gold">${modeNames[mode] || mode}</span>
+                </div>
+                <div class="info-tab-body">
+                    <div class="mine-mode-grid">${modeButtons}</div>
+                    ${level < 2 ? '<div class="mine-hint" style="color:var(--muted);margin-top:4px;">🔒 Режим «Торговля» открывается на уровне 2</div>' : ''}
+                    ${mode === 'trade' && level >= 2 ? `<div class="market-hint" style="${hasWarehouse ? 'color:#4ade80;border-color:rgba(34,197,94,0.2);background:rgba(34,197,94,0.06);' : ''}">
+                        📦 Склад рядом: ${hasWarehouse ? `✅ +4 💰 (итого 7 💰)` : '❌ нет — постройте склад в радиусе 2 клеток'}
+                    </div>` : ''}
+                </div>
+            </div>`;
+        },
+
+        _bindPortModeButtons: function(col, row) {
+            const modeBtns = this.buildingsList.querySelectorAll('[data-port-mode]');
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const newMode = btn.dataset.portMode;
+                    const b = HM.buildings[col + ',' + row];
+                    if (b && b.type === 'port') {
+                        const level = b.level || 1;
+                        if (newMode === 'trade' && level < 2) {
+                            if (window.UI) window.UI.showNotification('🔒 Режим «Торговля» доступен только на уровне 2');
+                            return;
+                        }
+                        b.portMode = newMode;
+                        if (window.UI) window.UI.showNotification(`⚓ Режим порта: ${C.BUILDINGS.port.portModeNames[newMode] || newMode}`);
+                        E.computeDeltas(HM);
                         this.openPanel(col, row);
                         window.Renderer.render();
                     }
@@ -598,8 +737,8 @@
                     parts.push(`<span class="bstat prod">💰 +${income} монет/ход</span>`);
                 } else if (building.type === 'mill') {
                     const active = E.isBuildingActive(HM, building.col, building.row);
-                    const wheatNeeded = Math.round(2 * (level === 2 ? 1.5 : 1));
-                    const breadProduced = Math.round(2 * (level === 2 ? 1.5 : 1));
+                    const wheatNeeded = level === 2 ? 4 : 2;
+                    const breadProduced = level === 2 ? 5 : 2;
                     parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🍞 +${breadProduced} хлеба/ход</span>`);
                     parts.push(`<span class="bstat cons">🌾 -${wheatNeeded} пшеницы/ход</span>`);
                 } else if (building.type === 'farm') {
@@ -627,6 +766,48 @@
                             parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">${rc.icon} +${total} ${rc.name}/ход</span>`);
                         }
                     }
+                } else if (building.type === 'factory') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const factLevel = building.level || 1;
+                    const factMode = building.factoryMode || 'goods';
+                    const effectiveMode = (factMode === 'steel' && factLevel < 2) ? 'goods' : factMode;
+                    const cfg2 = C.BUILDINGS['factory'];
+                    const prod = cfg2.factoryModeProduction[effectiveMode] || {};
+                    const cons = cfg2.factoryModeConsumption[effectiveMode] || {};
+                    const assigned = building.assignedWorkers || 0;
+                    const extraWorkers = Math.max(0, assigned - cfg2.workersRequired);
+                    const factor = 1 + extraWorkers * (1/3);
+                    for (const [res, amt] of Object.entries(prod)) {
+                        const rc = C.RESOURCES[res];
+                        if (rc) parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">${rc.icon} +${Math.round(amt * factor * 10)/10} ${rc.name}/ход</span>`);
+                    }
+                    for (const [res, amt] of Object.entries(cons)) {
+                        const rc = C.RESOURCES[res];
+                        if (rc) parts.push(`<span class="bstat cons">${rc.icon} -${amt} ${rc.name}/ход</span>`);
+                    }
+                } else if (building.type === 'smelter') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const woodNeeded = bc.consumption?.wood || 3;
+                    const coalProduced = bc.production?.coal || 1;
+                } else if (building.type === 'sawmill') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const tile = HM.data[building.row][building.col];
+                    const baseWood = bc.production?.wood || 3;
+                    const wood = tile.type === 'fertile' ? baseWood * 2 : baseWood;
+                    parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🟫 +${wood} дерева/ход (${tile.type === 'fertile' ? 'плодородная' : 'равнина'})</span>`);
+                } else if (building.type === 'port') {
+                    const active = E.isBuildingActive(HM, building.col, building.row);
+                    const portLevel = building.level || 1;
+                    const portMode = building.portMode || 'fishing';
+                    const effectiveMode = (portMode === 'trade' && portLevel < 2) ? 'fishing' : portMode;
+                    const assigned = building.assignedWorkers || 0;
+                    if (effectiveMode === 'trade') {
+                        parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🐟 +1 рыбы/ход</span>`);
+                        parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">💰 +3 монеты/ход</span>`);
+                    } else {
+                        const fish = assigned === 1 ? 2 : assigned >= 2 ? 5 : 0;
+                        parts.push(`<span class="bstat prod" style="${!active ? 'opacity:0.5' : ''}">🐟 +${fish} рыбы/ход (${assigned}/2 рыбаков)</span>`);
+                    }
                 } else {
                     for (const [res, amt] of Object.entries(bc.production)) {
                         if (amt <= 0) continue;
@@ -638,7 +819,7 @@
                     }
                 }
             }
-            if (bc.consumption && building.type !== 'mill') {
+            if (bc.consumption && building.type !== 'mill' && building.type !== 'factory') {
                 for (const [res, amt] of Object.entries(bc.consumption)) {
                     const rc = C.RESOURCES[res];
                     if (rc) parts.push(`<span class="bstat cons">${rc.icon} -${amt} ${rc.name}/ход</span>`);

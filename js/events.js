@@ -216,7 +216,7 @@
                     const pct  = 0.10 + Math.random() * 0.10;
                     const lost = Math.max(1, Math.floor(hm.resources.population * pct));
                     hm.resources.population = Math.max(0, hm.resources.population - lost);
-                    return { message: `${lost} жителей (${Math.round(pct * 100)}% населения) покинули страну.`, duration: 5000 };
+                    return { message: `🚶 Миграция: ${lost} жителей (${Math.round(pct * 100)}% населения) покинули страну.`, duration: 5000 };
                 }
             },
 

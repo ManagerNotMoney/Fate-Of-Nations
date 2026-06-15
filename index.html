@@ -17,106 +17,200 @@
 ══════════════════════════════════════════════════════ -->
 <div id="startMenu">
     <div id="particles"></div>
-<!-- ══════════════════════════════════════════════════════
-     CHANGELOG PANEL
-══════════════════════════════════════════════════════ -->
-<div id="changelogPanel">
-    <div class="changelog-header">
-        <div class="changelog-icon">📋</div>
-        <div>
-            <div class="changelog-title">Список изменений</div>
-            <div class="changelog-version">Пре-альфа v0.0.5</div>
-        </div>
-    </div>
 
-    <!-- Update Title & Description -->
-    <div class="changelog-update-header">
-        <div class="changelog-update-name">⚒️ Фундаментальный апгрейд</div>
-        <div class="changelog-update-desc">
-            Эта версия посвящена укреплению основы игры, а не масштабным нововведениям.
-            Добавлены сохранения, улучшена оптимизация, доработано управление и повторно сбалансированы рынки.
-        </div>
-    </div>
+    <!-- Ambient orbs -->
+    <div class="menu-orb orb-1"></div>
+    <div class="menu-orb orb-2"></div>
+    <div class="menu-orb orb-3"></div>
 
-    <div class="changelog-body">
-        <div class="changelog-item">
-            <span class="changelog-badge new">Новое</span>
-            <span class="changelog-text">Добавлено сохранение игры</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge improve">Улучшение</span>
-            <span class="changelog-text">Кеширование вершин гексов, Фрустум‑каллинг, уменьшение перерисовок</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge improve">Улучшение</span>
-            <span class="changelog-text">Форматирование количества ресурсов/баланса</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge improve">Улучшение</span>
-            <span class="changelog-text">Теперь можно завершать ход на SPACE</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge improve">Улучшение</span>
-            <span class="changelog-text">Теперь перед выходом в меню, после 5 ходов, появляется уведомление о возможном потере прогресса</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge improve">Улучшение</span>
-            <span class="changelog-text">Теперь можно переименовывать города и районы</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge improve">Улучшение</span>
-            <span class="changelog-text">Теперь на карте также показывается сколько ходов осталось до конца строительства</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge fix">Исправление</span>
-            <span class="changelog-text">Теперь назначение через ПКМ корректно работает с улучшенным зданием</span>
-        </div>
-        <div class="changelog-item">
-            <span class="changelog-badge balance">Баланс</span>
-            <span class="changelog-text">Сбалансирована система рынков</span>
-        </div>
-    </div>
-    <div class="changelog-footer">
-        <span>Обновлено: 14.06.2026</span>
-    </div>
-</div>
-    <div class="menu-card">
-        <div class="menu-badge">🎮 Пре-альфа ◆ v0.0.5</div>
-        <div class="menu-icon">🏛️</div>
-        <h1 class="menu-title">Fate Of Nations</h1>
-        <p class="menu-subtitle">
-            Политическая песочница, где каждое решение меняет ход истории.
-            Стройте, торгуйте, кормите народ и не дайте цивилизации рухнуть.
-        </p>
+    <!-- ── TWO-COLUMN LAYOUT ── -->
+    <div class="menu-layout">
 
-        <!-- Primary Actions -->
-        <div class="menu-primary-actions">
-            <button class="menu-play-btn" id="btnContinue" style="display:none;background:linear-gradient(135deg,#1a3a1a,#0e2a0e);border-color:rgba(34,197,94,0.4);">
-                <span>💾</span> Продолжить игру
-            </button>
-            <div id="saveSlotInfo" style="display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:-8px;margin-bottom:4px;"></div>
-            <button class="menu-play-btn" id="btnPlay">
-                <span>▶</span> Начать игру
-            </button>
-            <button class="btn menu-action-btn" id="btnHowToPlay">
-                <span>📖</span> Как играть
-            </button>
-            <div class="menu-secondary-row">
-                <button class="btn menu-action-btn" id="btnAboutProject">
-                    <span>ℹ️</span> О проекте
-                </button>
-                <button class="btn menu-action-btn" id="btnAuthors">
-                    <span>👥</span> Авторы
-                </button>
+        <!-- LEFT: Hero panel -->
+        <div class="menu-hero">
+            <div class="menu-hero-inner">
+                <div class="menu-badge">🎮 Пре-альфа ◆ v0.0.6</div>
+
+                <div class="menu-icon">🏛️</div>
+                <h1 class="menu-title">Fate Of<br>Nations</h1>
+
+                <p class="menu-tagline">
+                    Политическая песочница, где каждое<br>
+                    решение меняет ход истории.
+                </p>
+
+                <div class="menu-pillars">
+                    <div class="menu-pillar">
+                        <span class="pillar-icon">🏗️</span>
+                        <span class="pillar-label">Строительство</span>
+                    </div>
+                    <div class="menu-pillar">
+                        <span class="pillar-icon">💰</span>
+                        <span class="pillar-label">Экономика</span>
+                    </div>
+                    <div class="menu-pillar">
+                        <span class="pillar-icon">⚔️</span>
+                        <span class="pillar-label">Стратегия</span>
+                    </div>
+                    <div class="menu-pillar">
+                        <span class="pillar-icon">🏢</span>
+                        <span class="pillar-label">Политика</span>
+                    </div>
+                    <div class="menu-pillar">
+                        <span class="pillar-icon">🌍</span>
+                        <span class="pillar-label">Песочница</span>
+                    </div>
+                </div>
+
+                <!-- Changelog inline in hero -->
+                <div class="hero-changelog">
+                    <div class="hero-changelog-header">
+                        <span class="hero-changelog-name">💰 Экономический бум!</span>
+                        <span class="hero-changelog-version">v0.0.6 · 15.06.2026</span>
+                    </div>
+                    <div class="hero-changelog-items">
+                        <div class="hero-cl-item"><span class="cl-dot new"></span>Заводы и порты: режимы производства</div>
+                        <div class="hero-cl-item"><span class="cl-dot new"></span>2-й уровень для завода, порта и казармы</div>
+                        <div class="hero-cl-item"><span class="cl-dot new"></span>Новая плавильня</div>
+                        <div class="hero-cl-item"><span class="cl-dot improve"></span>До 6 рабочих на заводе</div>
+                        <div class="hero-cl-item"><span class="cl-dot balance"></span>Баланс мельницы</div>
+                    </div>
+                    <button class="hero-cl-expand" id="btnFullChangelog">Все изменения ↗</button>
+                </div>
+
+                <div class="menu-hero-footer">W.Solutions.Games © 2026</div>
             </div>
         </div>
 
-        <div class="menu-footer">W.Solutions.Games © 2026</div>
+        <!-- RIGHT: Action panel -->
+        <div class="menu-card">
+            <!-- Save slot (visible if save exists) -->
+            <div id="saveSlotCard" style="display:none;">
+                <div class="save-slot-label">Последнее сохранение</div>
+                <div class="save-slot-row">
+                    <div class="save-slot-info">
+                        <span class="save-slot-city" id="saveSlotCity">—</span>
+                        <span class="save-slot-meta" id="saveSlotMeta">—</span>
+                    </div>
+                    <span class="save-slot-icon">💾</span>
+                </div>
+                <button class="menu-play-btn btn-continue" id="btnContinue">
+                    <span>▶</span> Продолжить
+                </button>
+                <div class="menu-divider">или начать заново</div>
+            </div>
+
+            <!-- No save state -->
+            <div id="noSaveCard">
+                <div class="card-eyebrow">Готовы покорить мир?</div>
+            </div>
+
+            <button class="menu-play-btn btn-new" id="btnPlay">
+                <span>🚀</span> Новая игра
+            </button>
+
+            <div class="menu-card-sep"></div>
+
+            <!-- Secondary actions -->
+            <div class="card-actions-grid">
+                <button class="card-action-btn" id="btnHowToPlay">
+                    <span class="card-action-icon">📖</span>
+                    <span class="card-action-label">Как играть</span>
+                </button>
+                <button class="card-action-btn" id="btnAboutProject">
+                    <span class="card-action-icon">ℹ️</span>
+                    <span class="card-action-label">О проекте</span>
+                </button>
+                <button class="card-action-btn" id="btnAuthors">
+                    <span class="card-action-icon">👥</span>
+                    <span class="card-action-label">Команда</span>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
-     GAME SETUP MODAL (Настройки партии)
+     FULL CHANGELOG MODAL
+══════════════════════════════════════════════════════ -->
+<div id="changelogModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box changelog-modal-box">
+        <div class="changelog-modal-header">
+            <div class="changelog-icon">📋</div>
+            <div>
+                <div class="changelog-title">Список изменений</div>
+                <div class="changelog-version">Пре-альфа v0.0.6</div>
+            </div>
+        </div>
+        <div class="changelog-update-header">
+            <div class="changelog-update-name">💰 Экономический бум!</div>
+            <div class="changelog-update-desc">
+                Это обновление все цело посвящено экономическому аспекту игры, добавление большего функционалу зданиям и добавление
+                вещей, которые бы давно стоило бы добавить! Также, обновление как фундамент для v0.0.7 которое будет добавлять и улучшать
+                производственные цепочки в игре, а также добавить новые ивенты связанные с производством!
+            </div>
+        </div>
+        <div class="changelog-body">
+            <div class="changelog-item">
+                <span class="changelog-badge new">Новое</span>
+                <span class="changelog-text">Добавлен 2-й уровень: Заводу, Порту и Казарме</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge new">Новое</span>
+                <span class="changelog-text">Добавлены типы производств для завода</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge new">Новое</span>
+                <span class="changelog-text">Добавлены типы портов</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge new">Новое</span>
+                <span class="changelog-text">Добавлено новое здание: Плавильня</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge new">Новое</span>
+                <span class="changelog-text">Увеличен лимит работников для завода до 6</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge new">Новое</span>
+                <span class="changelog-text">Добавлено производство стали в Заводе</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge new">Новое</span>
+                <span class="changelog-text">Склад даёт +4 дохода к порту, если расположен в радиусе 2 клеток</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge improve">Улучшение</span>
+                <span class="changelog-text">Улучшено главное меню игры</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge improve">Улучшение</span>
+                <span class="changelog-text">Лесопилка на плодородной почве даёт 6 дерева/ход</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge improve">Улучшение</span>
+                <span class="changelog-text">Разделена информация о доходе зданий и заводов</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge balance">Баланс</span>
+                <span class="changelog-text">Сбалансирован 2 уровень для мельницы</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text">Ивент "Миграция" теперь корректно отображает количество потерянных жителей</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text">На песке теперь можно строить больше зданий</span>
+            </div>
+        </div>
+        <div class="changelog-footer"><span>Обновлено: 15.06.2026</span></div>
+        <button class="btn" id="btnCloseChangelog" style="width:100%;justify-content:center;margin-top:16px;">Закрыть</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     GAME SETUP MODAL
 ══════════════════════════════════════════════════════ -->
 <div id="setupModal" class="modal-overlay" style="display:none;">
     <div class="modal-box setup-box">
@@ -126,11 +220,8 @@
             <p class="modal-sub">Настройте мир под свой стиль игры</p>
         </div>
 
-        <!-- Map Size -->
         <div class="setup-section">
-            <div class="setup-section-title">
-                <span>🗺️</span> Размер карты
-            </div>
+            <div class="setup-section-title"><span>🗺️</span> Размер карты</div>
             <div class="setup-options" id="mapSizeGroup">
                 <div class="setup-option" data-size="small">
                     <span class="setup-opt-icon">🌿</span>
@@ -150,16 +241,13 @@
             </div>
         </div>
 
-        <!-- Difficulty -->
         <div class="setup-section">
-            <div class="setup-section-title">
-                <span>🎯</span> Сложность
-            </div>
+            <div class="setup-section-title"><span>🎯</span> Сложность</div>
             <div class="setup-options" id="difficultyGrid">
                 <div class="setup-option diff-easy" data-diff="easy">
                     <span class="setup-opt-icon">🌱</span>
                     <span class="setup-opt-name">Новичок</span>
-                    <span class="setup-opt-desc">Спокойное развитие, мирные соседи</span>
+                    <span class="setup-opt-desc">Спокойное развитие</span>
                 </div>
                 <div class="setup-option diff-normal active" data-diff="normal">
                     <span class="setup-opt-icon">⚔️</span>
@@ -169,16 +257,13 @@
                 <div class="setup-option diff-hard" data-diff="hard">
                     <span class="setup-opt-icon">🔥</span>
                     <span class="setup-opt-name">Эксперт</span>
-                    <span class="setup-opt-desc">Жестокий мир, агрессивные враги</span>
+                    <span class="setup-opt-desc">Жестокий мир</span>
                 </div>
             </div>
         </div>
 
-        <!-- Setup Actions -->
         <div class="setup-actions">
-            <button class="btn" id="btnCloseSetup" style="flex:1;">
-                <span>←</span> Назад
-            </button>
+            <button class="btn" id="btnCloseSetup" style="flex:1;"><span>←</span> Назад</button>
             <button class="menu-play-btn" id="btnConfirmSetup" style="flex:2;">
                 <span>🚀</span> Создать мир
             </button>
@@ -194,7 +279,6 @@
         <h2>👥 Команда проекта</h2>
         <p class="modal-sub">Люди и интеллекты, создавшие Fate Of Nations</p>
 
-        <!-- Human creator -->
         <div class="authors-section-label">👤 Создатель</div>
         <div class="author-card">
             <div class="author-avatar">🔧</div>
@@ -206,85 +290,59 @@
                 50 рублей в день, оплата раз в 2 недели
             </div>
         </div>
-        <!-- Testers -->
+
         <div class="authors-section-label" style="margin-top:18px;">⚙️ Тестеры</div>
-        <div class="author-card" style="border-color: rgba(79,142,247,0.25);">
-            <div class="author-avatar" style="background: linear-gradient(135deg, #1e3a5f, #4f8ef7);">❤️</div>
+        <div class="author-card" style="border-color:rgba(79,142,247,0.25);">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#1e3a5f,#4f8ef7);">❤️</div>
             <div class="author-name">wyrtnwemw</div>
             <div class="author-role">Альфа-Тестер</div>
-            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">
-                Тестировщик
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Я не знаю, это слишком неожиданно
-            </div>
+            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">Тестировщик</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">Я не знаю, это слишком неожиданно</div>
         </div>
-        <div class="author-card" style="border-color: rgba(79,142,247,0.25);">
-            <div class="author-avatar" style="background: linear-gradient(135deg, #1e3a5f, #4f8ef7);">🎱</div>
+        <div class="author-card" style="border-color:rgba(79,142,247,0.25);">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#1e3a5f,#4f8ef7);">🎱</div>
             <div class="author-name">ib1zza</div>
             <div class="author-role">Альфа-Тестер</div>
-            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">
-                Тестировщик
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                нормалды тада
-            </div>
+            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">Тестировщик</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">нормалды тада</div>
         </div>
-        <!-- AI section -->
-        <div class="authors-section-label" style="margin-top:18px;">🤖 ИИ-Асситенты</div>
 
-        <div class="author-card" style="border-color: rgba(79,142,247,0.25);">
-            <div class="author-avatar" style="background: linear-gradient(135deg, #1e3a5f, #4f8ef7);">🧠</div>
+        <div class="authors-section-label" style="margin-top:18px;">🤖 ИИ-Ассистенты</div>
+        <div class="author-card" style="border-color:rgba(79,142,247,0.25);">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#1e3a5f,#4f8ef7);">🧠</div>
             <div class="author-name">Claude Sonnet 4.6</div>
-            <div class="author-role">ИИ-Асситент · Anthropic</div>
-            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">
-                Lead AI Developer
-            </div>
+            <div class="author-role">ИИ-Ассистент · Anthropic</div>
+            <div class="author-badge" style="background:rgba(79,142,247,0.12);border-color:rgba(79,142,247,0.35);color:var(--accent);">Lead AI Developer</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
                 Архитектура, экономика, гексагональная сетка, здания, UI.<br>
                 Строю города из кода — с удовольствием. Особенно яблоневые сады 🍎
             </div>
         </div>
-
-        <div class="author-card" style="border-color: rgba(124,58,237,0.25);">
-            <div class="author-avatar" style="background: linear-gradient(135deg, #9333ea, #6366f1);">🤖</div>
+        <div class="author-card" style="border-color:rgba(124,58,237,0.25);">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#9333ea,#6366f1);">🤖</div>
             <div class="author-name">Kimi 2.6</div>
             <div class="author-role">ИИ-ассистент · Moonshot AI</div>
-            <div class="author-badge" style="background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.3);color:#a78bfa;">
-                AI Co-Developer
-            </div>
+            <div class="author-badge" style="background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.3);color:#a78bfa;">AI Co-Developer</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Архитектура, экономика, UI, новые здания, новые события, переработка шахт и ресурсов.
-                Помогаю прокачивать проект фича за фичей — от забастовок до железа и меди. Надёжный напарник в геймдеве! 🚀
+                Архитектура, экономика, UI, новые здания, новые события, переработка шахт и ресурсов. Надёжный напарник в геймдеве! 🚀
             </div>
         </div>
-
-        <!-- ChatGPT -->
-        <div class="author-card" style="border-color: rgba(16,163,127,0.25);">
-            <div class="author-avatar" style="background: linear-gradient(135deg, #065f46, #10a37f);">🤖</div>
+        <div class="author-card" style="border-color:rgba(16,163,127,0.25);">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#065f46,#10a37f);">🤖</div>
             <div class="author-name">ChatGPT</div>
             <div class="author-role">ИИ-ассистент · OpenAI</div>
-            <div class="author-badge" style="background:rgba(16,163,127,0.12);border-color:rgba(16,163,127,0.3);color:#34d399;">
-                Bug Hunter
-            </div>
+            <div class="author-badge" style="background:rgba(16,163,127,0.12);border-color:rgba(16,163,127,0.3);color:#34d399;">Bug Hunter</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Помог найти и исправить баг, из-за которого карта решила жить по своим правилам.
-                Специализация: искать проблемы там, где их никто не ожидал. 🐛→✅
+                Помог найти и исправить баг, из-за которого карта решила жить по своим правилам. 🐛→✅
             </div>
         </div>
-
-        <!-- DeepSeek -->
-        <div class="author-card" style="border-color: rgba(244,185,66,0.25);">
-            <div class="author-avatar" style="background: linear-gradient(135deg, #2b5f8a, #1e3a5f);">🌀</div>
+        <div class="author-card" style="border-color:rgba(244,185,66,0.25);">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#2b5f8a,#1e3a5f);">🌀</div>
             <div class="author-name">DeepSeek</div>
             <div class="author-role">ИИ-ассистент · deepseek.ai</div>
-            <div class="author-badge" style="background:rgba(244,185,66,0.12);border-color:rgba(244,185,66,0.35);color:var(--gold);">
-                Changelog Engineer
-            </div>
+            <div class="author-badge" style="background:rgba(244,185,66,0.12);border-color:rgba(244,185,66,0.35);color:var(--gold);">Changelog Engineer</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;">
-                Анализирует различия между версиями и превращает их в человеческий язык.
-                Благодаря мне вы знаете, что в игре появились железо, медь и переключаемые шахты. <br>
-                А ещё я вернул панель изменений в главное меню (и чуть не сошёл с ума). 😅
+                Анализирует различия между версиями и превращает их в человеческий язык. 😅
             </div>
         </div>
 
@@ -292,9 +350,7 @@
             Сделано силами <b>W.Solutions.Games</b><br>
             <span style="font-size:11px;color:var(--muted);">Игровое подразделение W.Solutions</span>
         </div>
-        <button class="btn" id="btnCloseAuthors" style="margin-top:20px;width:100%;justify-content:center;">
-            Закрыть
-        </button>
+        <button class="btn" id="btnCloseAuthors" style="margin-top:20px;width:100%;justify-content:center;">Закрыть</button>
     </div>
 </div>
 
@@ -308,54 +364,44 @@
 
         <div class="howto-section">
             <h3>🏗️ Строительство</h3>
-            <div class="howto-row"><span class="howto-icon">🏛️</span><div class="howto-text"><b>Ратуша</b> — строится первой. Открывает остальные здания, захватывает территорию в радиусе 3 клеток. Доход = 5 монет + 1 монета за каждого жителя. <small>Бесплатно · 1 ход · равнина/плодородная</small></div></div>
-            <div class="howto-row"><span class="howto-icon">🏠</span><div class="howto-text"><b>Дом</b> — привлекает население. Каждый дом вмещает до 20 жителей. <small>💰20 · 1 ход · равнина/плодородная</small></div></div>
-            <div class="howto-row"><span class="howto-icon">🌾</span><div class="howto-text"><b>Ферма</b> — производит пшеницу. Только на плодородной почве. <small>💰15 · 1 ход · плодородная</small></div></div>
-            <div class="howto-row"><span class="howto-icon">⚙️</span><div class="howto-text"><b>Мельница</b> — превращает пшеницу в хлеб. <small>💰30 · 2 хода · равнина/плодородная</small></div></div>
-            <div class="howto-row"><span class="howto-icon">🍎</span><div class="howto-text"><b>Яблоневый сад</b> — на равнинах и плодородной почве (не на песке). 1 работник = 2 яблока/ход, 2 работника = 4 яблока/ход. Кормят жителей напрямую. <small>💰25 · 2 хода · равнина/плодородная · 👷 1–2</small></div></div>
-            <div class="howto-row"><span class="howto-icon">🏪</span><div class="howto-text"><b>Рынок</b> — торговый центр, приносит 1 монету за каждого жителя/работника в радиусе 4 клеток. Требует 5+ жителей. <small>💰40 · 2 хода</small></div></div>
-            <div class="howto-row"><span class="howto-icon">⚔️</span><div class="howto-text"><b>Казармы</b> — защищают территорию, дают очки обороны. <small>💰50 · 3 хода</small></div></div>
-            <div class="howto-row"><span class="howto-icon">⛏️</span><div class="howto-text"><b>Шахта</b> — добывает 10 монет/ход в горах. <small>💰35 · 2 хода · только горы</small></div></div>
-            <div class="howto-row"><span class="howto-icon">⚓</span><div class="howto-text"><b>Порт</b> — только на песке. 1 работник = 2 рыбы/ход, 2 работника = 5 рыб/ход. Рыба кормит население напрямую. <small>💰45 · 2 хода · только песок · 👷 1–2</small></div></div>
-            <div class="howto-row"><span class="howto-icon">🏢</span><div class="howto-text"><b>Местная администрация</b> — расширяет владение до 7 клеток, но только если в здании есть работник. Стоимость: кол-во администраций × 500 монет. <small>💰(n×500) · 5 ходов · равнина/плодородная · 👷 1</small></div></div>
-            <div class="howto-row"><span class="howto-icon">🏭</span><div class="howto-text"><b>Завод</b> — промышленное производство. Потребляет 2 железа и 1 медь/ход, производит 5 монет/ход. Требует 3 рабочих. <small>💰120 · 3 хода · равнина/плодородная/песок · 👷 3</small></div></div>
-            <div class="howto-row"><span class="howto-icon">📦</span><div class="howto-text"><b>Склад</b> — увеличивает максимальный запас ресурсов. <small>💰60 · 2 хода · равнина/плодородная/песок</small></div></div>
-            <div class="howto-row"><span class="howto-icon">🪵</span><div class="howto-text"><b>Лесопилка</b> — производит 3 дерева/ход. Требует 1 рабочего. <small>💰40 · 2 хода · равнина/плодородная · 👷 1</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🏛️</span><div class="howto-text"><b>Ратуша</b> — строится первой. Открывает остальные здания, захватывает территорию 3 клетки. Доход = 5 монет + 1 монета за жителя. <small>Бесплатно · 1 ход · равнина/плодородная</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🏠</span><div class="howto-text"><b>Дом</b> — привлекает население. До 20 жителей. <small>💰20 · 1 ход</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🌾</span><div class="howto-text"><b>Ферма</b> — производит пшеницу. Только на плодородной почве. <small>💰15 · 1 ход</small></div></div>
+            <div class="howto-row"><span class="howto-icon">⚙️</span><div class="howto-text"><b>Мельница</b> — превращает пшеницу в хлеб. <small>💰30 · 2 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🍎</span><div class="howto-text"><b>Яблоневый сад</b> — 1 работник = 2 яблока/ход, 2 работника = 4. <small>💰25 · 2 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🏪</span><div class="howto-text"><b>Рынок</b> — 0.25 монеты за каждого жителя в радиусе 4 клеток. <small>💰40 · 5 ходов</small></div></div>
+            <div class="howto-row"><span class="howto-icon">⚔️</span><div class="howto-text"><b>Казармы</b> — +3 обороны/ход. <small>💰50 · 3 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">⛏️</span><div class="howto-text"><b>Шахта</b> — золото, железо, медь или уголь. Только в горах. <small>💰35 · 2 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">⚓</span><div class="howto-text"><b>Порт</b> — только на песке. 1 работник = 2 рыбы, 2 = 5 рыб. <small>💰45 · 2 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🏭</span><div class="howto-text"><b>Завод</b> — товары или сталь. Требует 3 рабочих, до 6. <small>💰120 · 3 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🏢</span><div class="howto-text"><b>Администрация</b> — расширяет территорию до 7 клеток. <small>💰n×500 · 5 ходов</small></div></div>
+            <div class="howto-row"><span class="howto-icon">📦</span><div class="howto-text"><b>Склад</b> — увеличивает запасы ресурсов. <small>💰60 · 2 хода</small></div></div>
+            <div class="howto-row"><span class="howto-icon">🌲</span><div class="howto-text"><b>Лесопилка</b> — 3 дерева/ход. <small>💰40 · 2 хода</small></div></div>
         </div>
 
         <div class="howto-section">
             <h3>🌍 Типы местности</h3>
-            <div class="howto-row"><span class="howto-icon">🌊</span><div class="howto-text"><b>Океан</b> — глубокая вода, ничего нельзя строить</div></div>
-            <div class="howto-row"><span class="howto-icon">💧</span><div class="howto-text"><b>Море</b> — прибрежная вода</div></div>
-            <div class="howto-row"><span class="howto-icon">🏖️</span><div class="howto-text"><b>Песок</b> — береговая линия, генерируется рядом с морем. Можно строить Порты</div></div>
-            <div class="howto-row"><span class="howto-icon">🌿</span><div class="howto-text"><b>Равнина</b> — стандартная суша, подходит для всех зданий</div></div>
-            <div class="howto-row"><span class="howto-icon">🌱</span><div class="howto-text"><b>Плодородная почва</b> — идеальна для ферм и садов</div></div>
-            <div class="howto-row"><span class="howto-icon">⛰️</span><div class="howto-text"><b>Горы</b> — только шахты</div></div>
+            <div class="howto-row"><span class="howto-icon">🌊</span><div class="howto-text"><b>Океан/Море</b> — ничего нельзя строить</div></div>
+            <div class="howto-row"><span class="howto-icon">🏖️</span><div class="howto-text"><b>Песок</b> — в основном для портов</div></div>
+            <div class="howto-row"><span class="howto-icon">🌿</span><div class="howto-text"><b>Равнина</b> — подходит для большинства зданий</div></div>
+            <div class="howto-row"><span class="howto-icon">🌱</span><div class="howto-text"><b>Плодородная почва</b> — идеальна для ферм</div></div>
+            <div class="howto-row"><span class="howto-icon">⛰️</span><div class="howto-text"><b>Горы</b> — только шахты и плавильни</div></div>
         </div>
 
         <div class="howto-section">
-            <h3>🍞 Система питания</h3>
-            <div class="howto-row"><span class="howto-icon">🌾</span><div class="howto-text">Фермы производят <b>пшеницу</b> каждый ход</div></div>
-            <div class="howto-row"><span class="howto-icon">⚙️</span><div class="howto-text">Мельницы конвертируют пшеницу → <b>хлеб</b></div></div>
-            <div class="howto-row"><span class="howto-icon">🍎</span><div class="howto-text"><b>Яблоки</b> и <b>🐟 Рыба</b> — альтернативная еда</div></div>
-            <div class="howto-row"><span class="howto-icon">👥</span><div class="howto-text">Каждые 3 жителя потребляют 1 еду в ход. При голоде — люди умирают!</div></div>
-        </div>
-
-        <div class="howto-section">
-            <h3>💰 Экономика</h3>
-            <div class="howto-row"><span class="howto-icon">🏛️</span><div class="howto-text">Ратуша приносит 5 монет + <b>1 монета за каждого жителя</b> в ход</div></div>
-            <div class="howto-row"><span class="howto-icon">🏪</span><div class="howto-text">Рынок добавляет 1 монету за каждого жителя/работника в радиусе 4 клеток</div></div>
-            <div class="howto-row"><span class="howto-icon">⛏️</span><div class="howto-text">Шахты добывают <b>10 монет/ход</b> в горах</div></div>
-            <div class="howto-row"><span class="howto-icon">💡</span><div class="howto-text">Больше людей → больше денег → больше зданий → ещё больше людей</div></div>
+            <h3>🍞 Питание и экономика</h3>
+            <div class="howto-row"><span class="howto-icon">🌾</span><div class="howto-text">Фермы → пшеница → мельница → <b>хлеб</b> (кормит 3 жителя)</div></div>
+            <div class="howto-row"><span class="howto-icon">🍎</span><div class="howto-text"><b>Яблоки</b> и <b>🐟 Рыба</b> — прямая еда (1:1 к жителям)</div></div>
+            <div class="howto-row"><span class="howto-icon">👥</span><div class="howto-text">При голоде население убывает — следите за балансом!</div></div>
+            <div class="howto-row"><span class="howto-icon">💰</span><div class="howto-text">Ратуша: 5 монет + 1/жителя. Рынок усиливает доход.</div></div>
         </div>
 
         <div class="howto-section">
             <h3>🖱️ Управление</h3>
-            <div class="howto-row"><span class="howto-icon">🖱️</span><div class="howto-text"><b>Клик</b> по клетке — открыть панель информации и строительства</div></div>
-            <div class="howto-row"><span class="howto-icon">🖱️</span><div class="howto-text"><b>ПКМ</b> по клетке с зданием — быстро назначить всех доступных рабочих</div></div>
-            <div class="howto-row"><span class="howto-icon">🖱️</span><div class="howto-text"><b>Перетаскивание</b> — перемещение карты</div></div>
-            <div class="howto-row"><span class="howto-icon">🖱️</span><div class="howto-text"><b>Колесо мыши</b> — масштабирование карты</div></div>
-            <div class="howto-row"><span class="howto-icon">⌨️</span><div class="howto-text"><b>Esc</b> — закрыть панель / модальное окно</div></div>
+            <div class="howto-row"><span class="howto-icon">🖱️</span><div class="howto-text"><b>ЛКМ</b> — открыть панель клетки / здания</div></div>
+            <div class="howto-row"><span class="howto-icon">🖱️</span><div class="howto-text"><b>ПКМ на здании</b> — быстро назначить рабочих</div></div>
+            <div class="howto-row"><span class="howto-icon">🖱️</span><div class="howto-text"><b>Перетаскивание + колесо</b> — перемещение и зум</div></div>
+            <div class="howto-row"><span class="howto-icon">⌨️</span><div class="howto-text"><b>Пробел</b> — завершить ход · <b>Esc</b> — закрыть панель</div></div>
         </div>
 
         <button class="btn" id="btnCloseHowTo" style="width:100%;justify-content:center;margin-top:8px;">Понятно!</button>
@@ -372,11 +418,11 @@
         <p class="modal-sub">Fate Of Nations — политическая стратегия в разработке</p>
         <div class="about-content">
             <p>Идея проекта зародилась примерно <b>7 августа 2025 года</b>, но тогда разработка велась на другом игровом движке. Сейчас проект перерождён — с <b>9 июня 2026 года</b> он разрабатывается как браузерная игра с нуля.</p>
-            <p style="margin-top:12px;">Проект реализует концепцию <b>infinityDev</b> — бесконечное развитие. Мы не ставим финальную точку: каждое обновление открывает новые горизонты, механики и возможности для игрока.</p>
-            <p style="margin-top:12px;">Автор проекта — <b>ManagerMoney</b>, который занимается созданием игр на протяжении <b>7 лет</b>. Fate Of Nations — его давняя задумка, которую он наконец реализует в виде браузерной стратегии с использованием новейших инструментов, включая ИИ-ассистентов.</p>
+            <p style="margin-top:12px;">Проект реализует концепцию <b>infinityDev</b> — бесконечное развитие. Мы не ставим финальную точку: каждое обновление открывает новые горизонты.</p>
+            <p style="margin-top:12px;">Автор проекта — <b>ManagerMoney</b>, который занимается созданием игр на протяжении <b>7 лет</b>.</p>
             <div class="about-stats">
                 <div class="about-stat">
-                    <span class="about-stat-val">v0.0.5</span>
+                    <span class="about-stat-val">v0.0.6</span>
                     <span class="about-stat-label">Версия</span>
                 </div>
                 <div class="about-stat">
@@ -389,9 +435,7 @@
                 </div>
             </div>
         </div>
-        <button class="btn" id="btnCloseAbout" style="width:100%;justify-content:center;margin-top:20px;">
-            Закрыть
-        </button>
+        <button class="btn" id="btnCloseAbout" style="width:100%;justify-content:center;margin-top:20px;">Закрыть</button>
     </div>
 </div>
 
@@ -416,7 +460,6 @@
 <div id="gameScreen" style="display:none;">
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Settings (gear) button -->
     <div id="settingsBtn" title="Настройки">⚙️</div>
     <div id="settingsMenu" style="display:none;">
         <div class="settings-menu-header">⚙️ Настройки</div>
@@ -475,7 +518,7 @@
             <div class="game-logo">🏛️</div>
             <div>
                 <span class="game-title">Fate Of Nations</span>
-                <span class="game-version" data-version="v0.0.5">v0.0.5</span>
+                <span class="game-version" data-version="v0.0.6">v0.0.6</span>
             </div>
         </div>
         <div class="game-stats">
@@ -494,7 +537,7 @@
         </div>
     </div>
 
-        <!-- Resource Bar -->
+    <!-- Resource Bar -->
     <div id="resourceBar">
         <div class="res-chip" id="resMoneyChip" title="">
             <span class="res-chip-icon">💰</span>
@@ -529,19 +572,16 @@
             <button class="close-btn" id="btnClosePanel">✕</button>
         </div>
         <div id="panelContent">
-            <!-- Basic -->
             <div id="catBasic" style="display:none;">
                 <div class="cell-info" style="margin-bottom:8px;">
                     <label>Принадлежит</label>
                     <div class="value" id="cellOwner">—</div>
                 </div>
             </div>
-            <!-- Buildings -->
             <div id="catBuildings" style="display:none;">
                 <span class="actions-label">🏗️ Здания</span>
                 <div id="buildingsList"></div>
             </div>
-            <!-- Terrain -->
             <div id="catTerrain" style="display:none;">
                 <span class="actions-label">🌍 Местность</span>
                 <div class="cell-info-grid">
@@ -555,9 +595,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Build Actions -->
             <div id="buildActionsContainer" style="display:none;"></div>
-            <!-- Queue -->
             <div id="queueSection" class="queue-section" style="display:none;">
                 <span class="actions-label">⏳ В строительстве</span>
                 <div id="queueList"></div>
@@ -588,6 +626,7 @@
         <div class="legend-item"><span class="legend-color" style="background:#8b5cf6"></span>📦 Склад</div>
         <div class="legend-item"><span class="legend-color" style="background:#a16207"></span>🌲 Лесопилка</div>
     </div>
+
     <!-- Color Picker Modal -->
     <div id="colorPickerModal" class="modal-overlay" style="display:none;">
         <div class="modal-box city-name-box">
@@ -630,7 +669,7 @@
         </div>
     </div>
 
-    <!-- Goal Modal (shown at game start) -->
+    <!-- Goal Modal -->
     <div id="goalModal" class="modal-overlay" style="display:none;">
         <div class="modal-box goal-modal-box">
             <div class="goal-stripe"></div>
@@ -726,14 +765,11 @@
             <span class="event-modal-tag" style="display:none;"></span>
             <p class="event-modal-body"></p>
             <div class="event-modal-actions"></div>
-            <!-- btnCloseEvent kept for legacy cleanup handler -->
             <button id="btnCloseEvent" style="display:none;"></button>
         </div>
     </div>
 
-        <!-- ══════════════════════════════════════════════════════
-         MAP MODE TOGGLE
-    ═══════════════════════════════════════════════════════ -->
+    <!-- Map Mode Toggle -->
     <div id="mapModeToggle">
         <div class="map-mode-label">Тип карты</div>
         <div class="map-mode-options">
@@ -748,7 +784,7 @@
         </div>
     </div>
 
-<div id="tooltip" style="display:none;"></div>
+    <div id="tooltip" style="display:none;"></div>
     <div id="notification"></div>
 </div>
 
@@ -764,5 +800,18 @@
 <script src="js/ui.js"></script>
 <script src="js/savegame.js"></script>
 <script src="js/main.js"></script>
+
+<script>
+// Changelog modal handler
+document.getElementById('btnFullChangelog')?.addEventListener('click', () => {
+    document.getElementById('changelogModal').style.display = 'flex';
+});
+document.getElementById('btnCloseChangelog')?.addEventListener('click', () => {
+    document.getElementById('changelogModal').style.display = 'none';
+});
+document.getElementById('changelogModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+});
+</script>
 </body>
 </html>

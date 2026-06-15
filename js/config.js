@@ -63,9 +63,9 @@
                 allowedTiles: ['fertile'],
                 unique: false,
                 workersRequired: 1,
-                maxLevel: 2,                    // ← ДОБАВИТЬ
-                upgradeCost: { money: 40 },     // ← ДОБАВИТЬ
-                levelWorkersMax: { 1: 1, 2: 2 }, // ← Уровень 2: можно нанять 2-го работника
+                maxLevel: 2,
+                upgradeCost: { money: 40 },
+                levelWorkersMax: { 1: 1, 2: 2 },
                 description: 'Только на плодородной почве. Производит 3 пшеницы/ход. Требует 1 жителя. Уровень 2: +50% урожайности и можно нанять 2-го работника.'
             },
             mill: {
@@ -78,9 +78,9 @@
                 allowedTiles: ['plain', 'fertile'],
                 unique: false,
                 workersRequired: 2,
-                maxLevel: 2,                    // ← ДОБАВИТЬ
-                upgradeCost: { money: 80 },     // ← ДОБАВИТЬ
-                description: 'Перерабатывает 2 пшеницы → 2 хлеба/ход. Требует 2 жителей-мельников. Уровень 2: 4 хлеба за 4 пшеницы.'
+                maxLevel: 2,
+                upgradeCost: { money: 80 },
+                description: 'Перерабатывает 2 пшеницы → 2 хлеба/ход. Требует 2 жителей-мельников. Уровень 2: 5 хлеба за 4 пшеницы.'
             },
             orchard: {
                 name: 'Яблоневый сад',
@@ -101,7 +101,7 @@
                 cost: { money: 40 },
                 production: { money: 0 }, // Dynamic: based on nearby pop
                 turnsToComplete: 5,
-                allowedTiles: ['plain', 'fertile'],
+                allowedTiles: ['sand','plain', 'fertile'],
                 unique: false,
                 marketRadius: 5,
                 moneyPerResident: 0.25,
@@ -116,7 +116,9 @@
                 allowedTiles: ['sand','plain', 'fertile'],
                 unique: false,
                 workersRequired: 2,
-                description: 'Защита территории. +3 очка обороны/ход. Требует 2 солдат из населения.'
+                maxLevel: 2,
+                upgradeCost: { money: 30, steel: 45 },
+                description: 'Защита территории. +3 очка обороны/ход. Требует 2 солдат из населения. Уровень 2: +6 обороны/ход (за 30 монет и 45 стали).'
             },
             mine: {
                 name: 'Шахта',
@@ -146,7 +148,21 @@
                 allowedTiles: ['plain', 'fertile'],
                 unique: false,
                 workersRequired: 3,
-                description: 'Промышленное производство. Постройка требует 30 угля (добывается в шахтах). Потребляет 2 железа и 1 медь/ход, производит 10 монет/ход. Требует 3 рабочих.'
+                workersMax: 6,
+                maxLevel: 2,
+                upgradeCost: { money: 200, iron: 10 },
+                factoryModes: ['goods', 'steel'],
+                factoryModeNames: { goods: 'Товары', steel: 'Сталь' },
+                factoryModeIcons: { goods: '📦', steel: '🔩' },
+                factoryModeProduction: {
+                    goods: { money: 10 },
+                    steel: { steel: 1 }
+                },
+                factoryModeConsumption: {
+                    goods: { iron: 2, copper: 1 },
+                    steel: { iron: 3, coal: 2 }
+                },
+                description: 'Промышленное производство. Постройка требует 30 угля. Режим «Товары»: потребляет 2 железа и 1 медь/ход → 10 монет/ход. Режим «Сталь» (ур.2): 3 железа + 2 уголь → 1 сталь/ход. До 6 рабочих: каждый доп. рабочий сверх 3 даёт +33% эффективности (макс ×2). Требует минимум 3 рабочих.'
             },
             warehouse: {
                 name: 'Склад',
@@ -154,7 +170,7 @@
                 cost: { money: 60, wood: 15 },
                 production: {},
                 turnsToComplete: 2,
-                allowedTiles: ['plain', 'fertile'],
+                allowedTiles: ['sand','plain', 'fertile'],
                 unique: false,
                 description: 'Увеличивает максимальный запас ресурсов. Строится на равнинах, плодородной почве и песке.'
             },
@@ -167,7 +183,19 @@
                 allowedTiles: ['plain', 'fertile'],
                 unique: false,
                 workersRequired: 1,
-                description: 'Производит 3 дерева/ход. Требует 1 рабочего. Строится только на равнинах и плодородной почве.'
+                description: 'Производит 3 дерева/ход (6 на плодородной почве). Требует 1 рабочего. Строится только на равнинах и плодородной почве.'
+            },
+            smelter: {
+                name: 'Плавильня',
+                icon: '🔥',
+                cost: { money: 55 },
+                production: { coal: 1 },
+                consumption: { wood: 3 },
+                turnsToComplete: 2,
+                allowedTiles: ['sand','plain', 'fertile','mountain'],
+                unique: false,
+                workersRequired: 1,
+                description: 'Перерабатывает 3 дерева → 1 уголь/ход. Требует 1 рабочего.'
             },
             port: {
                 name: 'Порт',
@@ -179,7 +207,16 @@
                 unique: false,
                 workersRequired: 1,
                 workersMax: 2,
-                description: 'Только на песке. 1 работник = 2 рыбы/ход, 2 работника = 5 рыб/ход. Каждая рыба кормит 1 жителя. Можно назначить до 2 рыбаков.'
+                maxLevel: 2,
+                upgradeCost: { money: 10, wood: 20 },
+                portModes: ['fishing', 'trade'],
+                portModeNames: { fishing: 'Рыбалка', trade: 'Торговля' },
+                portModeIcons: { fishing: '🎣', trade: '🚢' },
+                portModeProduction: {
+                    fishing: {},   // handled dynamically (1 worker=2fish, 2 workers=5fish)
+                    trade:   { fish: 1, money: 3 }
+                },
+                description: 'Только на песке. Режим «Рыбалка»: 1 рабочий = 2 рыбы/ход, 2 рабочих = 5 рыб/ход. Режим «Торговля» (ур.2): +1 рыба и +3 монеты/ход независимо от числа рыбаков. Уровень 2: 10 монет + 20 дерева.'
             },
             local_admin: {
                 name: 'Местная администрация',
@@ -187,7 +224,7 @@
                 cost: { money: 0 },  // Dynamic cost: count * 500
                 production: {},
                 turnsToComplete: 5,
-                allowedTiles: ['plain', 'fertile'],
+                allowedTiles: ['sand','plain', 'fertile'],
                 unique: false,
                 workersRequired: 1,
                 description: 'Расширяет владение территорией в радиусе 7 клеток вокруг себя. Стоимость: кол-во администраций × 500 монет. Требует 1 жителя-администратора.'
