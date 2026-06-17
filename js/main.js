@@ -17,7 +17,7 @@
         lastBuildType: null    // Последний тип здания в очереди/постройке
     };
 
-    let config = { mapSize: 'medium', difficulty: 'normal' };
+    let config = { mapSize: 'medium', difficulty: 'normal', mapType: 'auto' };
 
     const startMenu    = document.getElementById('startMenu');
     const setupModal   = document.getElementById('setupModal');
@@ -93,6 +93,13 @@
                 document.getElementById('mapSizeGroup').querySelectorAll('.setup-option').forEach(o => o.classList.remove('active'));
                 opt.classList.add('active');
                 config.mapSize = opt.dataset.size;
+            });
+        });
+        document.getElementById('mapTypeGroup').querySelectorAll('.setup-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.getElementById('mapTypeGroup').querySelectorAll('.setup-option').forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+                config.mapType = opt.dataset.maptype;
             });
         });
 
@@ -270,7 +277,7 @@
         window.GameState.isDragging = false;
         window.GameState.dragMoved = false;
         document.getElementById('turnCounter').textContent = '1';
-        HM.generate(config.mapSize, config.difficulty);
+        HM.generate(config.mapSize, config.difficulty, config.mapType);
         R.init('gameCanvas');
         HM.center(R.canvas.width, R.canvas.height);
         R.render();
@@ -289,7 +296,7 @@
         const ok = window.SaveGame.restore(data);
         if (!ok) {
             // Fallback: start fresh
-            HM.generate(config.mapSize, config.difficulty);
+            HM.generate(config.mapSize, config.difficulty, config.mapType);
         }
         document.getElementById('turnCounter').textContent = window.GameState.currentTurn;
         HM.center(R.canvas.width, R.canvas.height, /* keepCamera= */ true);
@@ -415,7 +422,7 @@
                     UI.showNotification('🖱️ Режим застройки: сначала постройте любое здание вручную', 3000);
                     return;
                 }
-                const result = window.EconomyEngine.queueBuild(HM, hex.col, hex.row, type);
+                const result = window.ConstructionEngine.queueBuild(HM, hex.col, hex.row, type);
                 if (result.ok) {
                     const bc = window.GameConfig.BUILDINGS[type];
                     UI.showNotification(bc.icon + ' ' + bc.name + ' — поставлено в очередь');
@@ -427,7 +434,7 @@
                         window.GameState.selectedCell.row === hex.row) {
                         UI.openPanel(hex.col, hex.row);
                     }
-                    R.render();
+                    R.requestRender();
                 } else {
                     UI.showNotification('⚠️ ' + result.reason, 2500);
                 }
@@ -458,7 +465,7 @@
                 HM.cameraX = mx - (mx - HM.cameraX) * ratio;
                 HM.cameraY = my - (my - HM.cameraY) * ratio;
                 HM.zoom = newZoom;
-                R.render();
+                R.requestRender();
             }
         }, { passive: false });
 
@@ -483,7 +490,7 @@
                 const newZoom = Math.max(0.4, Math.min(3.5, HM.zoom * ratio));
                 HM.zoom = newZoom;
                 lastTouchDist = dist;
-                R.render();
+                R.requestRender();
             }
         }, { passive: true });
     }

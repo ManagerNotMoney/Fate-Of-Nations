@@ -29,7 +29,7 @@
         <!-- LEFT: Hero panel -->
         <div class="menu-hero">
             <div class="menu-hero-inner">
-                <div class="menu-badge">🎮 Пре-альфа ◆ v0.0.7</div>
+                <div class="menu-badge">🎮 Пре-альфа ◆ v0.0.8</div>
 
                 <div class="menu-icon">🏛️</div>
                 <h1 class="menu-title">Fate Of<br>Nations</h1>
@@ -57,15 +57,14 @@
                 <!-- Changelog inline in hero -->
                 <div class="hero-changelog">
                     <div class="hero-changelog-header">
-                        <span class="hero-changelog-name">🍒 Вишнёвая сложность!</span>
-                        <span class="hero-changelog-version">v0.0.7 · 15.06.2026</span>
+                        <span class="hero-changelog-name">🏗️Технический рефакторинг</span>
+                        <span class="hero-changelog-version">v0.0.8 · 17.06.2026</span>
                     </div>
                     <div class="hero-changelog-items">
-                        <div class="hero-cl-item"><span class="cl-dot new"></span>Сложность влияет на стартовые ресурсы</div>
-                        <div class="hero-cl-item"><span class="cl-dot improve"></span>Улучшена стабильность игры</div>
-                        <div class="hero-cl-item"><span class="cl-dot improve"></span>Улучшен текст всех ивентов</div>
-                        <div class="hero-cl-item"><span class="cl-dot fix"></span>Плавильня теперь отображается корректно</div>
-                        <div class="hero-cl-item"><span class="cl-dot fix"></span>Исправлена статистика яблоневого сада</div>
+                        <div class="hero-cl-item"><span class="cl-dot new"></span>Добавлены реки</div>
+                        <div class="hero-cl-item"><span class="cl-dot new"></span>Новая генерация карты</div>
+                        <div class="hero-cl-item"><span class="cl-dot improve"></span>Улучшена производительность</div>
+                        <div class="hero-cl-item"><span class="cl-dot improve"></span>Перемещение по карте стало плавнее</div>
                     </div>
                     <button class="hero-cl-expand" id="btnFullChangelog">Все изменения ↗</button>
                 </div>
@@ -131,76 +130,82 @@
             <div class="changelog-icon">📋</div>
             <div>
                 <div class="changelog-title">Список изменений</div>
-                <div class="changelog-version">Пре-альфа v0.0.7</div>
+                <div class="changelog-version">Пре-альфа v0.0.8</div>
             </div>
         </div>
         <div class="changelog-update-header">
-            <div class="changelog-update-name">🍒 Вишнёвая сложность!</div>
+            <div class="changelog-update-name">🏗️Технический рефакторинг</div>
             <div class="changelog-update-desc">
-                Обновление v0.0.7 добавляет влияние уровня сложности на стартовые ресурсы — теперь каждая
-                сложность даёт уникальный игровой опыт! Также исправлены большая часть багов, а также добавлен новый ресурс: Вишня!
-                А также новое здание "Вишнёвый сад"
+                Обновление v0.0.8 в основном техническое обновление, которое подготовливает фундамент игры для добавления ИИ-Врагов
             </div>
         </div>
         <div class="changelog-body">
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Уровень сложности влияет на стартовые ресурсы (еду, людей, деньги, материалы)</span>
+                <span class="changelog-text"> Добавлены типы генерации карты</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Новичок: 100💰 16🍞 8👥 30🟫 20⛓️ 20🔶 — комфортный старт</span>
+                <span class="changelog-text"> Добавлены реки</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Стандарт: 50💰 9🍞 3👥 — классический баланс</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Эксперт: 25💰 4🍞 2👥 — жестокий вызов для профи</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Новая еда: Вишня и новое здание: Вишнёвый сад</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge new">Новое</span>
-                <span class="changelog-text">Новая ивент: Вишнёвый бум!</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge fix">Исправление</span>
-                <span class="changelog-text">Исправлена ошибка с кол-вом людей и рынком</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge fix">Исправление</span>
-                <span class="changelog-text">Плавильня теперь корректно отображается на карте</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge fix">Исправление</span>
-                <span class="changelog-text">Исправлена статистика плавильни в панели здания — показывает производство угля</span>
-            </div>
-            <div class="changelog-item">
-                <span class="changelog-badge fix">Исправление</span>
-                <span class="changelog-text">Исправлена статистика яблоневого сада в панели здания — показывает яблоки</span>
+                <span class="changelog-text"> Новая система генерация карты</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge improve">Улучшение</span>
-                <span class="changelog-text">Улучшена стабильность: добавлены защитные проверки в экономику</span>
+                <span class="changelog-text"> Значительно улучшена производительность при отдалении камеры</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge improve">Улучшение</span>
-                <span class="changelog-text">После ивента "Несчастный случай" 1 ход, отображается 💀 над зданием где был ивент</span>
+                <span class="changelog-text"> Перемещение по карте стало плавнее на слабых устройствах</span>
             </div>
             <div class="changelog-item">
                 <span class="changelog-badge improve">Улучшение</span>
-                <span class="changelog-text">Улучшены текст всех ивентов</span>
+                <span class="changelog-text"> Уменьшены тормоза при большом количестве зданий на карте</span>
             </div>
             <div class="changelog-item">
-                <span class="changelog-badge improve">Улучшение</span>
-                <span class="changelog-text">Сохранение теперь хранит выбранную сложность</span>
+                <span class="changelog-badge balance">Баланс</span>
+                <span class="changelog-text"> Сбалансирован 2-й уровень порта, теперь он дает больше рыбы</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> Шахты больше не исчезают после строительства администрации</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> Доход с портов, теперь указывается во вкладке доходы</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> Теперь, после ивента "Несчастный случай" не появляется ложное уведомление</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> При наведении курсора на плавильню, показывается корректный эмодзи</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text">После загрузки сохранения ресурс-бар сразу показывает актуальные данные</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> Мельница без пшеницы теперь правильно отображается как простаивающая</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> Отмена строительства администрации возвращает правильную сумму монет</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> Панель района в администрации больше не падает с ошибкой</span>
+            </div>
+            <div class="changelog-item">
+                <span class="changelog-badge fix">Исправление</span>
+                <span class="changelog-text"> Панель "может прокормить" теперь работает корректно с вишней</span>
             </div>
         </div>
-        <div class="changelog-footer"><span>Обновлено: 15.06.2026</span></div>
+        <div class="changelog-footer"><span>Обновлено: 17.06.2026</span></div>
         <button class="btn" id="btnCloseChangelog" style="width:100%;justify-content:center;margin-top:16px;">Закрыть</button>
     </div>
 </div>
@@ -225,25 +230,54 @@
                     <span class="setup-opt-desc">22×17 клеток</span>
                 </div>
                 <div class="setup-option active" data-size="medium">
-                    <span class="setup-opt-icon">🌍</span>
+                    <span class="setup-opt-icon">🌐</span>
                     <span class="setup-opt-name">Средняя</span>
                     <span class="setup-opt-desc">34×26 клеток</span>
                 </div>
                 <div class="setup-option" data-size="large">
-                    <span class="setup-opt-icon">🌌</span>
+                    <span class="setup-opt-icon">🌍</span>
                     <span class="setup-opt-name">Большая</span>
                     <span class="setup-opt-desc">54×42 клеток</span>
                 </div>
+                <div class="setup-option" data-size="huge">
+                    <span class="setup-opt-icon">🌌</span>
+                    <span class="setup-opt-name">Огромная</span>
+                    <span class="setup-opt-desc">80×62 клеток</span>
+                </div>
             </div>
         </div>
-
+        <div class="setup-section">
+            <div class="setup-section-title"><span>🌍</span> Тип карты</div>
+            <div class="setup-options" id="mapTypeGroup">
+                <div class="setup-option active" data-maptype="auto">
+                    <span class="setup-opt-icon">🎲</span>
+                    <span class="setup-opt-name">Случайный</span>
+                    <span class="setup-opt-desc">Каждый раз разный</span>
+                </div>
+                <div class="setup-option" data-maptype="continent">
+                    <span class="setup-opt-icon">🌍</span>
+                    <span class="setup-opt-name">Континент</span>
+                    <span class="setup-opt-desc">Суша в центре</span>
+                </div>
+                <div class="setup-option" data-maptype="archipelago">
+                    <span class="setup-opt-icon">🏝️</span>
+                    <span class="setup-opt-name">Архипелаг</span>
+                    <span class="setup-opt-desc">Острова в океане</span>
+                </div>
+                <div class="setup-option" data-maptype="rivers">
+                    <span class="setup-opt-icon">🌊</span>
+                    <span class="setup-opt-name">Речной край</span>
+                    <span class="setup-opt-desc">Много рек и плодородия</span>
+                </div>
+            </div>
+        </div>
         <div class="setup-section">
             <div class="setup-section-title"><span>🎯</span> Сложность</div>
             <div class="setup-options" id="difficultyGrid">
                 <div class="setup-option diff-easy" data-diff="easy">
                     <span class="setup-opt-icon">🌱</span>
                     <span class="setup-opt-name">Новичок</span>
-                    <span class="setup-opt-desc">100💰 16🍞 8👥 30🪵</span>
+                    <span class="setup-opt-desc">100💰 16🍞 8👥 30🟫</span>
                 </div>
                 <div class="setup-option diff-normal active" data-diff="normal">
                     <span class="setup-opt-icon">⚔️</span>
@@ -418,7 +452,7 @@
             <p style="margin-top:12px;">Автор проекта — <b>ManagerMoney</b>, который занимается созданием игр на протяжении <b>7 лет</b>.</p>
             <div class="about-stats">
                 <div class="about-stat">
-                    <span class="about-stat-val">v0.0.7</span>
+                    <span class="about-stat-val">v0.0.8</span>
                     <span class="about-stat-label">Версия</span>
                 </div>
                 <div class="about-stat">
@@ -514,7 +548,7 @@
             <div class="game-logo">🏛️</div>
             <div>
                 <span class="game-title">Fate Of Nations</span>
-                <span class="game-version" data-version="v0.0.7">v0.0.7</span>
+                <span class="game-version" data-version="v0.0.8">v0.0.8</span>
             </div>
         </div>
         <div class="game-stats">
@@ -784,17 +818,20 @@
     <div id="notification"></div>
 </div>
 
-<script src="js/config.js"></script>
-<script src="js/noise.js"></script>
-<script src="js/events.js"></script>
-<script src="js/economy.js"></script>
-<script src="js/hexmap.js"></script>
-<script src="js/renderer.js"></script>
-<script src="js/ui-tooltips.js"></script>
-<script src="js/ui-modals.js"></script>
-<script src="js/ui-panel.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/savegame.js"></script>
+<script src="js/core/config.js"></script>
+<script src="js/world/noise.js"></script>
+<script src="js/world/events.js"></script>
+<script src="js/core/construction.js"></script>
+<script src="js/society/population.js"></script>
+<script src="js/core/economy.js"></script>
+<script src="js/society/ideology.js"></script>
+<script src="js/core/hexmap.js"></script>
+<script src="js/render/renderer.js"></script>
+<script src="js/ui/ui-tooltips.js"></script>
+<script src="js/ui/ui-modals.js"></script>
+<script src="js/ui/ui-panel.js"></script>
+<script src="js/ui/ui.js"></script>
+<script src="js/core/savegame.js"></script>
 <script src="js/main.js"></script>
 
 <script>

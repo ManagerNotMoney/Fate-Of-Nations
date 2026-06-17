@@ -1,152 +1,147 @@
-# 🏛️ Fate Of Nations — политическая стратегия
+```markdown
+# 🏛️ Fate Of Nations — Technical Overview
 
-**Версия: Пре-альфа v0.0.7 (Вишнёвый бум!)**  
-*infinityDev — бесконечное развитие*
-
----
-
-## 🌍 Что это за игра?
-
-**Fate Of Nations** — браузерная политическая песочница, где вы строите город, управляете ресурсами, назначаете рабочих, расширяете территорию и сталкиваетесь с непредсказуемыми событиями. Каждое решение меняет судьбу вашей цивилизации.
-
-Игра в активной разработке, но уже предлагает полноценный игровой цикл: стройте здания, добывайте ресурсы, кормите население, отбивайте набеги и боритесь за победу.
+**v0.0.8** · Pre-alpha · InfinityDev
 
 ---
 
-## 🎮 Особенности
+## 📦 Project Structure
 
-### 🗺️ Гексагональная карта
-- Процедурная генерация с биомами: океан, море, песок, равнина, плодородная почва, горы.
-- Размеры: маленькая (22×17), средняя (34×26), большая (54×42).
-- Территория города отображается цветом фракции и расширяется с помощью администраций.
-
-### 🏗️ Здания и экономика (v0.0.6)
-
-Доступно **14 типов зданий**:
-
-| Здание | Описание |
-|--------|----------|
-| **Ратуша** | Сердце города. Доход: 5💰 + 1💰/жителя. Захват территории 3 клетки. Уровень 2 → скидка 4% на все постройки. |
-| **Дом** | +2 населения, вмещает до 20 жителей. |
-| **Ферма** | 3🌾/ход (только плодородная почва). Уровень 2 → 1,5× урожайности и 2 работника. |
-| **Мельница** | 2🍞 из 2🌾. Уровень 2 → 5🍞 из 4🌾. |
-| **Яблоневый сад** | 1 работник → 2🍎, 2 работника → 4🍎. |
-| **Порт** | Режимы: Рыбалка (1 раб → 2🐟, 2 раба → 5🐟) и Торговля (ур.2: +1🐟 +3💰). Склад в радиусе 2 → +4💰 к торговле. |
-| **Шахта** | Режимы: золото (5💰), железо (3⛓️), медь (3🔶), уголь (3⚫). Уровень 2 → третий шахтёр даёт +25% добычи. |
-| **Завод** | Режимы: Товары (2⛓️+1🔶 → 10💰) и Сталь (ур.2: 3⛓️+2⚫ → 1🔩). До 6 рабочих → +33% эффективности за каждого сверх 3. |
-| **Плавильня** 🔥 *(новое)* | 3🌲 → 1⚫/ход. |
-| **Рынок** | 0,25💰 за каждого жителя в радиусе 5 клеток. Конкуренция (другой рынок рядом) → доход ÷4. |
-| **Казармы** | +3🛡️/ход. Уровень 2 → +6🛡️. |
-| **Лесопилка** | 3🌲/ход (6 на плодородной). |
-| **Склад** | +150 к лимиту хранения ресурсов. |
-| **Местная администрация** | Расширяет территорию в радиусе 7 клеток. Динамическая цена (500 + 250 за очередь). |
-
-### 👥 Население и рабочие
-- Каждый житель должен быть накормлен (хлеб, яблоки, рыба).
-- Нехватка жилья → эмиграция.
-- Для работы зданий нужны рабочие (ПКМ по зданию → быстрый набор/увольнение).
-- Свободные жители считаются **анархистами** и влияют на политику.
-
-### 📦 Ресурсы
-- **Продовольствие:** пшеница, хлеб, яблоки, рыба.
-- **Промышленные:** железо, медь, уголь, сталь, дерево.
-- Лимит хранения: 150 + 150 за каждый склад.
-
-### ⚡ События (v0.0.3)
-
-**Мировые:**
-- Засуха, миграция, набег, хороший урожай, морская удача, алмазы, больше яблок.
-
-**Локальные (можно решить в панели здания):**
-- Коррупция, пожар, несчастный случай, забастовка, саранча, обвал в шахте, «Долой буржуазию!».
-
-### 🏆 Цель победы
-- **200+ жителей** и **300 000+ монет**.
-- Удерживать оба условия **30 ходов подряд**.
-
-При населении 0 → поражение.
-
----
-
-## 🖱️ Управление
-
-| Действие | Клавиша / мышь |
-|----------|----------------|
-| Перемещение карты | Зажать ЛКМ + перетаскивание |
-| Масштаб | Колёсико мыши |
-| Открыть панель клетки | ЛКМ по клетке |
-| Быстро назначить/убрать рабочих | ПКМ по зданию |
-| Режим застройки (вкл в настройках) | ПКМ по пустой клетке — построить последнее здание |
-| Закрыть панель / модалку | `Esc` |
-| Завершить ход | Кнопка или `Пробел` |
-
----
-
-## 🚀 Как запустить
-
-1. Скачайте все файлы проекта.
-2. Откройте `index.html` в любом современном браузере (Chrome, Firefox, Edge).
-3. Никакого сервера не требуется — игра работает локально.
-
----
-
-## 🛠️ Технологии
-
-- Чистый **HTML5/CSS3/JS** (без внешних зависимостей)
-- Гексагональная сетка (pointy-top, odd-r offset)
-- Процедурная генерация (шум fBm)
-- Система строительства с очередью
-- Динамическая экономика и события
-- Модальные окна и тултипы
-
----
-
-## 👥 Команда проекта
-
-| Роль | Имя |
-|------|-----|
-| Создатель, геймдизайнер, продюсер | **ManagerMoney** |
-| Альфа-тестеры | wyrtnwemw, ib1zza |
-| ИИ-ассистент (архитектура, экономика, UI) | Claude Sonnet 4.6 |
-| ИИ-ассистент (фичи, здания, события) | Kimi 2.6 |
-| ИИ-ассистент (отладка багов) | ChatGPT |
-| ИИ-ассистент (changelog) | DeepSeek |
-
-**Студия:** W.Solutions.Games
-
----
-
-## 📜 Разработка
-
-Проект развивается по принципу **infinityDev** — бесконечное развитие. Каждое обновление добавляет новые механики, здания, события и улучшения.
-
-**Текущая версия:** Пре-альфа v0.0.6 (обновлено 15.06.2026)
-
-Полный список изменений — в главном меню.
-
----
-
-## 📁 Структура проекта
-index.html # Главная страница (меню + игра)
+```
+index.html               # Entry point (menu, game screen, modals)
 css/
-├── style.css # Базовые стили и токены
-├── style-menu.css # Стили главного меню
-├── style-game.css # Стили игрового экрана
-└── style-overlays.css # Модальные окна, тултипы, анимации
+  ├── style.css          # Global tokens, reset, particles
+  ├── style-menu.css     # Main menu & setup modals
+  ├── style-game.css     # In-game UI (top bar, resource bar, panel, legend)
+  └── style-overlays.css # Tooltips, notifications, event modals, endgame
 js/
-├── config.js # Все игровые константы (здания, ресурсы)
-├── noise.js # Генерация шума для карты
-├── hexmap.js # Гексагональная карта, территория
-├── economy.js # Экономика, рабочие, строительство, очередь
-├── events.js # Система мировых и локальных событий
-├── renderer.js # Отрисовка карты, зданий, анимаций
-├── ui.js # Основной UI, ходы, уведомления
-├── ui-panel.js # Панель информации о клетке
-├── ui-modals.js # Модальные окна (название города, события, победа)
-├── ui-tooltips.js # Всплывающие подсказки
-├── savegame.js # Сохранение/загрузка (LocalStorage)
-└── main.js # Точка входа, меню, настройки партии
+  ├── core/
+  │   ├── config.js      # All constants: TILES, BUILDINGS, RESOURCES, DIFFICULTY, MAP_SIZES
+  │   ├── construction.js # Build validation, queue, pricing, demolish/upgrade
+  │   ├── economy.js     # Resource delta calculation, food consumption, turn processing
+  │   ├── hexmap.js      # Map state, geometry, territory, generation, camera
+  │   └── savegame.js    # Serialization to localStorage, metadata
+  ├── world/
+  │   ├── noise.js       # Perlin noise (fBm) for procedural map generation
+  │   └── events.js      # World & local events, active effects (drought, strike, locust)
+  ├── society/
+  │   ├── population.js  # Workers, citizens, housing, commuting, district stats
+  │   └── ideology.js    # Political factions (global & district counts)
+  ├── render/
+  │   └── renderer.js    # Canvas 2D rendering (hexes, buildings, animations)
+  ├── ui/
+  │   ├── ui.js          # Main UI: resource bar, turn, notifications, delegates
+  │   ├── ui-panel.js    # Cell panel: building info, workers, residents, modes
+  │   ├── ui-modals.js   # Modals: city name, color picker, events, win/lose
+  │   └── ui-tooltips.js # Tooltips for resource chips and canvas hover
+  └── main.js            # Menu, setup, game flow, canvas events, auto-save
+```
 
 ---
 
-*Сделано с ❤️ силами W.Solutions.Games*
+## 🧠 Core Architecture
+
+### Single Source of Truth: `window.HexMap`
+- Holds all game data: `data` (tiles), `buildings`, `buildQueue`, `territory`, `citizens`, `resources`, `deltas`, `factionColor`.
+- Provides geometry helpers (`hexToPixel`, `pixelToHex`, `hexDistance`) and territory management (`claimTerritory`, `recalculateTerritory`).
+- Delegates worker/building/economy calls to respective engines.
+
+### Pure-Function Engines
+Each engine receives `hexMap` as first argument and returns results or mutates `hexMap` directly (side effects are explicit):
+- **ConstructionEngine** – `canBuild`, `queueBuild`, `cancelBuild`, `demolishBuilding`, `upgradeBuilding`, `getDynamicCost`, `getMarketIncome`.
+- **EconomyEngine** – `computeDeltas(hexMap)` → calculates per-turn resource changes; `processTurn(hexMap, completed)` → applies deltas, handles housing, win/lose, caps.
+- **PopulationEngine** – worker assignment, citizen registry, housing sync, job commuting, district statistics.
+- **IdeologyEngine** – counts workers by ideology, determines dominant faction (global & per district).
+- **EventsEngine** – triggers random events, manages active effects (strike, drought, locust), applies effects to deltas.
+
+### UI Controllers
+- **UI** – orchestrates resource bar, turn button, notifications, construction animation, delegates to sub-modules.
+- **UIPanel** – opens on cell click; displays terrain, building details, residents, workers, market stats, mine/factory/port modes.
+- **UIModals** – handles city naming, color picker, event modals, goal, win/lose.
+- **UITooltips** – hover tooltips for resource chips and hex cells.
+
+### Renderer
+- `Renderer` draws the map on Canvas 2D using frustum culling, shared vertex cache, and zoom‑out optimisation (dots instead of icons).
+- Uses `requestRender()` with `_rafPending` flag to avoid redundant frames.
+
+---
+
+## 🔄 Key Data Flows
+
+### Map Generation
+1. `main.js` calls `HexMap.generate(size, difficulty, mapType)`.
+2. `generate()` uses fBm noise with different parameters based on `mapType` (continent, archipelago, rivers, auto).
+3. Produces `data` array of tile objects.
+
+### Turn Processing
+1. User clicks "End Turn" → `UI.endTurn()`.
+2. `HexMap.processTurn()`:
+   - Decrements build queue; completed buildings are placed.
+   - Calls `EconomyEngine.processTurn(hexMap, completed)`.
+3. `EconomyEngine.processTurn()`:
+   - Triggers world events.
+   - Computes deltas (production, consumption, food, population).
+   - Applies deltas to resources.
+   - Recalculates territory.
+   - Syncs citizens (housing, emigration).
+   - Checks win/lose conditions.
+   - Caps resources (storage limit).
+4. UI updates resource bar, panel, queue, and triggers re‑render.
+
+### Rendering Loop
+- `Renderer.render()` is called on:
+  - Every `requestRender()` after state changes (build, end turn, panel open, zoom/pan).
+  - Zoom/pan use `requestRender()` with throttling to avoid excessive draws.
+
+### Saving/Loading
+- `SaveGame.save()` serialises `HexMap`, `GameState`, `EventsEngine` into JSON → localStorage.
+- `SaveGame.restore(data)` reconstructs `HexMap.data`, buildings, queue, territory, citizens, resources, deltas, and engine states.
+- Auto‑save after each turn and every 30 seconds.
+
+---
+
+## 🧩 Adding New Content
+
+### New Building
+1. Define in `config.js` under `BUILDINGS` – specify `cost`, `production`, `consumption`, `workersRequired`, `allowedTiles`, `maxLevel`, etc.
+2. If it needs special logic (e.g., mine modes, factory modes), add handling in:
+   - `EconomyEngine.computeDeltas()` for production/consumption.
+   - `UIPanel._render...` for UI tabs.
+   - `renderer.js` `BUILDING_STYLES` for colours.
+3. Update `config.js` `RESOURCES` if new resource types are introduced.
+
+### New Event
+1. Add object to `EventsEngine.REGISTRY` with `id`, `name`, `icon`, `scope` (`world` or `local`), `condition(hexMap)`, `apply(hexMap)`.
+2. For local events, `apply()` must apply irreversible effects immediately and return `choices` array with actions.
+3. UI automatically handles display and choice resolution via `UIModals.openEventModal()`.
+
+### New Map Type
+1. Add entry to `MAP_TYPES` in `config.js`.
+2. Modify `HexMap.generate()` – add a branch in the `mapType` logic to adjust noise parameters and post‑processing (e.g., more rivers, continental shape).
+
+---
+
+## 🛠 Development Notes
+
+- **Global dependencies**: All modules are loaded via `<script>` tags in `index.html`. Order matters:
+  1. `config.js`
+  2. `noise.js`
+  3. `events.js`
+  4. `construction.js`, `population.js`, `economy.js`, `ideology.js`, `hexmap.js`
+  5. `renderer.js`
+  6. UI modules (`ui‑tooltips.js`, `ui‑modals.js`, `ui‑panel.js`, `ui.js`)
+  7. `savegame.js`, `main.js`
+- **State mutations**: Most engines mutate `hexMap` directly. Keep side effects local and document them.
+- **Performance**: Use `Renderer.requestRender()` instead of direct `render()` where possible. For heavy loops (e.g., citizen sync), avoid O(n²) – current algorithms are acceptable for up to ~200 citizens.
+- **Debugging**: `window.HexMap` is globally accessible from browser console for inspection.
+
+---
+
+## 📜 License & Credits
+
+Developed by **W.Solutions.Games**  
+AI assistants: Claude Sonnet 4.6, Kimi 2.6, ChatGPT, DeepSeek  
+Alpha testers: wyrtnwemw, ib1zza
+
+**InfinityDev** – every update expands the game without a final endpoint.
+```
