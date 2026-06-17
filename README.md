@@ -1,4 +1,3 @@
-```markdown
 # 🏛️ Fate Of Nations — Technical Overview
 
 **v0.0.8** · Pre-alpha · InfinityDev
@@ -144,4 +143,3 @@ AI assistants: Claude Sonnet 4.6, Kimi 2.6, ChatGPT, DeepSeek
 Alpha testers: wyrtnwemw, ib1zza
 
 **InfinityDev** – every update expands the game without a final endpoint.
-```
